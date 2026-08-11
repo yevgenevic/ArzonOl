@@ -224,23 +224,9 @@ ul { margin: 0; padding: 0; list-style: none; }
 .topnav__logo {
   display: inline-flex;
   align-items: center;
-  gap: var(--spacing-8);
   flex: none;
   text-decoration: none;
   cursor: pointer;
-}
-
-.topnav__logo-img {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  object-fit: cover;
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.topnav__logo:hover .topnav__logo-img {
-  transform: scale(1.08);
 }
 
 .topnav__brand {
@@ -249,13 +235,32 @@ ul { margin: 0; padding: 0; list-style: none; }
   font-weight: 700;
   letter-spacing: -0.04em;
   color: var(--color-ink-black);
+  display: inline-flex;
+  align-items: center;
 }
 
-.brand-green {
+.brand-ol {
   color: #00b843;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
 }
 
-[data-theme="dark"] .brand-green {
+.topnav__emblem-o {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  margin: 0 1px 0 2px;
+  vertical-align: -2px;
+  display: inline-block;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.topnav__logo:hover .topnav__emblem-o {
+  transform: scale(1.15) rotate(10deg);
+}
+
+[data-theme="dark"] .brand-ol {
   color: #34d399;
 }
 
@@ -565,32 +570,6 @@ ul { margin: 0; padding: 0; list-style: none; }
 .stars svg { width: 9px; height: 9px; }
 .stars .is-empty { color: var(--color-cool-stone); }
 
-.hero__brand-header {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-12);
-  margin-bottom: var(--spacing-8);
-}
-
-.hero__logo-img {
-  width: 92px;
-  height: 92px;
-  border-radius: var(--radius-full);
-  object-fit: cover;
-  box-shadow: 0 12px 32px rgba(0, 43, 102, 0.16);
-  border: 3px solid var(--surface-surface);
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease;
-}
-
-.hero__logo-img:hover {
-  transform: scale(1.08) rotate(3deg);
-  box-shadow: 0 16px 40px rgba(0, 43, 102, 0.22);
-}
-
 .wordmark {
   position: relative;
   z-index: 1;
@@ -598,30 +577,50 @@ ul { margin: 0; padding: 0; list-style: none; }
   align-items: center;
   justify-content: center;
   gap: 0;
-  margin: 0;
+  margin: 0 auto;
   font-size: 88px;
   line-height: 1;
   letter-spacing: -0.05em;
   font-weight: 800;
+}
+
+.wordmark__main {
   color: #0b2d64;
 }
 
-.wordmark__accent {
+.wordmark__ol {
   color: #00b843;
-  background: linear-gradient(135deg, #00b843 0%, #00e676 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
 }
 
-[data-theme="dark"] .wordmark {
+.wordmark__emblem-o {
+  width: 0.88em;
+  height: 0.88em;
+  object-fit: contain;
+  margin: 0 0.03em 0 0.04em;
+  vertical-align: -0.04em;
+  display: inline-block;
+  filter: drop-shadow(0 4px 14px rgba(0, 43, 102, 0.16));
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.35s ease;
+}
+
+.wordmark:hover .wordmark__emblem-o {
+  transform: scale(1.12) rotate(12deg);
+  filter: drop-shadow(0 8px 20px rgba(0, 43, 102, 0.24));
+}
+
+[data-theme="dark"] .wordmark__main {
   color: #f1f5f9;
 }
 
-[data-theme="dark"] .wordmark__accent {
+[data-theme="dark"] .wordmark__ol {
   color: #34d399;
-  background: linear-gradient(135deg, #34d399 0%, #6ee7b7 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+}
+
+[data-theme="dark"] .wordmark__emblem-o {
+  filter: drop-shadow(0 4px 14px rgba(52, 211, 153, 0.25));
 }
 
 .hero__tagline {
@@ -1937,18 +1936,19 @@ ul { margin: 0; padding: 0; list-style: none; }
   display: flex;
   align-items: center;
   gap: var(--spacing-12);
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.04em;
   color: #ffffff;
 }
 
-.footer__logo-img {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  object-fit: cover;
-  box-shadow: var(--shadow-sm);
+.footer__emblem-o {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  margin: 0 1px 0 2px;
+  vertical-align: -3px;
+  display: inline-block;
 }
 
 .footer__blurb {
