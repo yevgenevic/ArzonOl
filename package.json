@@ -1,0 +1,9 @@
+{
+  "name": "bozor-aggregator",
+  "version": "1.0.0",
+  "description": "Bozor Price Aggregator for Uzbekistan",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  }
+}
