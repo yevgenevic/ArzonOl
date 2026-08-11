@@ -1230,6 +1230,12 @@ ul { margin: 0; padding: 0; list-style: none; }
 
 .overlay.is-open { opacity: 1; pointer-events: auto; }
 
+/* display:grid выше перебивал атрибут hidden — закрытые окна оставались
+   visibility:visible и принимали фокус, поэтому Tab проваливался в невидимые
+   диалоги. Скрываем явно; анимацию не ломает: hidden ставится через 200 мс
+   после снятия .is-open. */
+.overlay[hidden] { display: none; }
+
 .sheet {
   width: min(940px, 100%);
   max-height: 90vh;
@@ -1308,6 +1314,14 @@ ul { margin: 0; padding: 0; list-style: none; }
   border-radius: var(--radius-chips);
   background: var(--color-success-bg);
   color: var(--color-success-green);
+}
+
+.sheet__trend-badge:empty { display: none; }
+
+/* Подорожание не должно выглядеть как хорошая новость */
+.sheet__trend-badge.is-up {
+  background: color-mix(in srgb, var(--color-muted-gray) 12%, transparent);
+  color: var(--color-muted-gray);
 }
 
 .sheet__chart-canvas {
@@ -1628,14 +1642,21 @@ ul { margin: 0; padding: 0; list-style: none; }
   box-shadow: var(--shadow-lg);
   z-index: 130;
   transform: translateX(100%);
-  transition: transform 280ms cubic-bezier(.2, .7, .3, 1);
+  /* visibility убирает уехавшую панель из таб-порядка; задержка равна времени
+     сдвига, поэтому анимация закрытия успевает проиграться */
+  visibility: hidden;
+  transition: transform 280ms cubic-bezier(.2, .7, .3, 1), visibility 0s linear 280ms;
   display: flex;
   flex-direction: column;
   border-top-left-radius: var(--radius-cards);
   border-bottom-left-radius: var(--radius-cards);
 }
 
-.drawer.is-open { transform: none; }
+.drawer.is-open {
+  transform: none;
+  visibility: visible;
+  transition: transform 280ms cubic-bezier(.2, .7, .3, 1), visibility 0s;
+}
 
 .drawer__head {
   display: flex;

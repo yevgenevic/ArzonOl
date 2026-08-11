@@ -132,6 +132,7 @@ const TRANSLATIONS = {
     'footer.link.jobs': 'Вакансии',
     'footer.link.press': 'Пресса',
     'footer.link.partners': 'Подключение площадок',
+    'footer.tagline': 'Агрегатор цен',
     'footer.legal': 'Политика конфиденциальности · Условия · Демо-версия',
 
     'cookie.text': 'ArzonOL использует cookies, чтобы запоминать список сравнения и отслеживаемые товары. Подробнее — в',
@@ -265,6 +266,7 @@ const TRANSLATIONS = {
     'footer.link.jobs': 'Vakansiyalar',
     'footer.link.press': 'Matbuot',
     'footer.link.partners': 'Maydonlarni ulash',
+    'footer.tagline': 'Narxlar agregatori',
     'footer.legal': 'Maxfiylik siyosati · Shartlar · Demo versiya',
 
     'cookie.text': 'ArzonOL kuzatilayotgan va taqqoslash ro\'yxatlarini saqlash uchun cookies ishlatadi. Batafsil —',
@@ -398,6 +400,7 @@ const TRANSLATIONS = {
     'footer.link.jobs': 'Careers',
     'footer.link.press': 'Press',
     'footer.link.partners': 'For marketplaces',
+    'footer.tagline': 'Price aggregator',
     'footer.legal': 'Privacy policy · Terms · Demo version',
 
     'cookie.text': 'ArzonOL uses cookies to save your tracked prices and comparison items. Read more in our',

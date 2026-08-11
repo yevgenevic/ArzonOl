@@ -528,6 +528,61 @@ function syncBadges() {
 let lastFocused = null;
 let openProductId = null;
 
+/* --------------------------------------------------------------------------
+   Фокус в диалогах
+
+   Открытое окно должно забирать фокус, удерживать его по Tab и возвращать
+   на кнопку, которая его вызвала. Фон помечаем inert, чтобы скринридер
+   не читал страницу за окном.
+   -------------------------------------------------------------------------- */
+
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
+
+function focusablesIn(root) {
+  return $$(FOCUSABLE, root).filter(el => el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+}
+
+function trapFocus(e, dialog) {
+  if (e.key !== 'Tab') return;
+  const items = focusablesIn(dialog);
+  if (!items.length) return;
+
+  const first = items[0], last = items[items.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
+
+let activeDialog = null;
+
+function openDialog(dialog) {
+  activeDialog = dialog;
+  $('.shell')?.setAttribute('inert', '');
+  $('.topnav')?.setAttribute('inert', '');
+  // ждём кадр: до снятия hidden элементы ещё не имеют размеров
+  requestAnimationFrame(() => {
+    const first = focusablesIn(dialog)[0];
+    (first || dialog).focus?.();
+  });
+}
+
+function closeDialog() {
+  activeDialog = null;
+  $('.shell')?.removeAttribute('inert');
+  $('.topnav')?.removeAttribute('inert');
+  lastFocused?.focus();
+}
+
+/* Страховка: если окно закрылось в обход closeDialog, страница осталась бы
+   inert и полностью неработоспособной. Цена ошибки слишком велика, поэтому
+   сверяемся с фактическим состоянием окон. */
+function syncDialogState() {
+  // .map($) передал бы индекс во второй параметр $ (root) — отсюда обёртка
+  const open = ['#alert-modal', '#compare-modal', '#overlay'].map(sel => $(sel)).find(el => el && !el.hidden)
+            || ($('#drawer').classList.contains('is-open') ? $('#drawer') : null);
+  if (!open && activeDialog) closeDialog();
+  else if (open) activeDialog = open;
+}
+
 function openSheet(id) {
   const p = byId(id);
   lastFocused = document.activeElement;
@@ -539,6 +594,7 @@ function openSheet(id) {
   overlay.hidden = false;
   requestAnimationFrame(() => overlay.classList.add('is-open'));
   document.body.style.overflow = 'hidden';
+  openDialog(overlay);
 }
 
 function fillSheet(p) {
@@ -626,7 +682,19 @@ function fillSheet(p) {
 function renderPriceChart(p) {
   const trend = priceTrend(p);
   const trendBadge = $('#sheet-trend-badge');
-  trendBadge.textContent = trend.isDrop ? `-${trend.percent}% · ${t('chart.bestTime')}` : t('chart.allTimeLow');
+
+  // Раньше здесь любая недешевеющая цена подписывалась как «минимальная за всё
+  // время». Пока история была одинаковой и всегда падающей, это не проявлялось.
+  const pct = Math.abs(trend.percent);
+  if (trend.isDrop && pct > 0) {
+    trendBadge.textContent = `${t('chart.trendDown')} ${pct}%` +
+      (trend.isAllTimeLow ? ` · ${t('chart.bestTime')}` : '');
+  } else if (!trend.isDrop && pct > 0) {
+    trendBadge.textContent = `${t('chart.trendUp')} ${pct}%`;
+  } else {
+    trendBadge.textContent = trend.isAllTimeLow ? t('chart.allTimeLow') : '';
+  }
+  trendBadge.classList.toggle('is-up', !trend.isDrop && pct > 0);
 
   const history = priceHistory(p);
   const chartBox = $('#sheet-chart');
@@ -676,7 +744,7 @@ function closeSheet() {
   document.body.style.overflow = '';
   openProductId = null;
   setTimeout(() => { overlay.hidden = true; }, 200);
-  lastFocused?.focus();
+  closeDialog();
 }
 
 /* --------------------------------------------------------------------------
@@ -690,12 +758,21 @@ function openAlertModal(productId) {
   const modal = $('#alert-modal');
   modal.hidden = false;
   requestAnimationFrame(() => modal.classList.add('is-open'));
+  // подписка открывается поверх карточки товара — запоминаем, куда вернуть фокус
+  alertOpener = document.activeElement;
+  activeDialog = modal;
+  requestAnimationFrame(() => focusablesIn(modal)[0]?.focus());
 }
+
+let alertOpener = null;
 
 function closeAlertModal() {
   const modal = $('#alert-modal');
   modal.classList.remove('is-open');
   setTimeout(() => { modal.hidden = true; }, 200);
+  // возвращаемся в карточку товара, если она ещё открыта
+  activeDialog = openProductId ? $('#overlay') : null;
+  alertOpener?.focus();
 }
 
 /* --------------------------------------------------------------------------
@@ -704,26 +781,33 @@ function closeAlertModal() {
 
 function openCompareDrawer() {
   renderCompareDrawer();
+  lastFocused = document.activeElement;
   $('#drawer').classList.add('is-open');
   $('#drawer').setAttribute('aria-hidden', 'false');
   $('#scrim').classList.add('is-open');
   document.body.style.overflow = 'hidden';
+  openDialog($('#drawer'));
 }
 
-function closeCompareDrawer() {
+function closeCompareDrawer(keepFocus) {
   $('#drawer').classList.remove('is-open');
   $('#drawer').setAttribute('aria-hidden', 'true');
   $('#scrim').classList.remove('is-open');
   document.body.style.overflow = '';
+  // при переходе в таблицу сравнения фокус отдаём ей, а не возвращаем назад
+  if (!keepFocus) closeDialog();
 }
 
 function openCompareModal() {
-  closeCompareDrawer();
+  const opener = document.activeElement;
+  closeCompareDrawer(true);
   renderCompareTable();
+  lastFocused = opener;
   const modal = $('#compare-modal');
   modal.hidden = false;
   requestAnimationFrame(() => modal.classList.add('is-open'));
   document.body.style.overflow = 'hidden';
+  openDialog(modal);
 }
 
 function closeCompareModal() {
@@ -731,6 +815,7 @@ function closeCompareModal() {
   modal.classList.remove('is-open');
   document.body.style.overflow = '';
   setTimeout(() => { modal.hidden = true; }, 200);
+  closeDialog();
 }
 
 function renderCompareTable() {
@@ -1107,12 +1192,19 @@ function wireEvents() {
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-      if ($('#alert-modal').classList.contains('is-open')) closeAlertModal();
-      else if ($('#compare-modal').classList.contains('is-open')) closeCompareModal();
-      else if ($('#overlay').classList.contains('is-open')) closeSheet();
+      // Открытость проверяем по hidden, а не по .is-open: класс навешивается
+      // внутри requestAnimationFrame, и завязывать на него закрытие окна значит
+      // ставить работоспособность в зависимость от кадра отрисовки.
+      if (!$('#alert-modal').hidden) closeAlertModal();
+      else if (!$('#compare-modal').hidden) closeCompareModal();
+      else if (!$('#overlay').hidden) closeSheet();
       else if ($('#drawer').classList.contains('is-open')) closeCompareDrawer();
       else hideSuggests();
     }
+    // Tab не должен выводить из открытого окна
+    syncDialogState();
+    if (activeDialog) { trapFocus(e, activeDialog); return; }
+
     if (e.key === '/' && !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) {
       e.preventDefault();
       activeSearchInput().focus();

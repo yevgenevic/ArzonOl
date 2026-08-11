@@ -467,14 +467,60 @@ function calcDeliveryDays(offer, regionId) {
   return offer.delivery + region.offset;
 }
 
-/* 6-месячная история цен для SVG-графика */
+/* Последние 6 месяцев, считая от сегодняшнего дня */
+function lastSixMonths() {
+  const now = new Date();
+  return Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+}
+
+/* Детерминированный псевдослучайный поток из строки: одинаковый товар всегда
+   получает одну и ту же историю, но у разных товаров она разная. */
+function seededRandom(seed) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return () => {
+    h += 0x6d2b79f5;
+    let x = Math.imul(h ^ (h >>> 15), 1 | h);
+    x ^= x + Math.imul(x ^ (x >>> 7), 61 | x);
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* 6-месячная история цен для SVG-графика.
+
+   Форма кривой зависит от товара: часть дешевеет, часть дорожает, часть
+   колеблется без тренда. Раньше множители были одни на весь каталог, из-за
+   чего все товары показывали −12% и «минимальная цена за всё время». */
 function priceHistory(product) {
-  const best = bestOffer(product).price;
-  const months = ['2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02'];
-  const factors = [1.14, 1.11, 1.09, 1.05, 1.02, 1.0];
+  const current = bestOffer(product).price;
+  const rand = seededRandom(product.id);
+  const months = lastSixMonths();
+
+  // 45% дешевеют, 30% дорожают, 25% болтаются на месте
+  const roll = rand();
+  const shape = roll < 0.45 ? 'down' : roll < 0.75 ? 'up' : 'flat';
+
+  // насколько цена ушла от сегодняшней полгода назад
+  const drift = shape === 'down' ? 0.06 + rand() * 0.16   // была дороже на 6–22%
+              : shape === 'up'   ? -(0.05 + rand() * 0.13) // была дешевле на 5–18%
+              : (rand() - 0.5) * 0.06;
+
+  const factors = months.map((_, i) => {
+    const progress = i / (months.length - 1);        // 0 → полгода назад, 1 → сейчас
+    const noise = (rand() - 0.5) * 0.035;            // месячные колебания
+    const base = 1 + drift * (1 - progress);
+    return i === months.length - 1 ? 1 : base + noise; // последняя точка = текущая цена
+  });
+
   return months.map((m, i) => ({
     date: m,
-    price: Math.round((best * factors[i]) / 1000) * 1000
+    price: Math.round((current * factors[i]) / 1000) * 1000
   }));
 }
 
