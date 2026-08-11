@@ -1,6 +1,7 @@
 /* ==========================================================================
    Переводы интерфейса — ru / uz / en
    Ключи плоские, через точку.
+   Бренд: ArzonOL
    ========================================================================== */
 
 const LANGS = [
@@ -114,7 +115,7 @@ const TRANSLATIONS = {
     'toast.compareCleared': 'Список сравнения очищен',
     'toast.compareLimit': 'Можно сравнивать до 4 товаров одновременно',
 
-    'footer.blurb': 'Агрегатор цен на мебель, технику и стройматериалы в Узбекистане. Сравнивайте предложения маркетплейсов и покупайте выгоднее.',
+    'footer.blurb': 'ArzonOL — агрегатор цен на мебель, технику и стройматериалы в Узбекистане. Сравнивайте предложения маркетплейсов и покупайте выгоднее.',
     'footer.disclaimer': 'Внимание: цены и данные о наличии на сайте носят демонстрационный характер и не являются публичной офертой.',
     'footer.shop': 'Каталог',
     'footer.help': 'Помощь',
@@ -133,7 +134,7 @@ const TRANSLATIONS = {
     'footer.link.partners': 'Подключение площадок',
     'footer.legal': 'Политика конфиденциальности · Условия · Демо-версия',
 
-    'cookie.text': 'Мы используем cookies, чтобы запоминать список сравнения и отслеживаемые товары. Подробнее — в',
+    'cookie.text': 'ArzonOL использует cookies, чтобы запоминать список сравнения и отслеживаемые товары. Подробнее — в',
     'cookie.link': 'политике конфиденциальности',
     'cookie.accept': 'Принять всё',
     'cookie.reject': 'Только необходимые',
@@ -247,7 +248,7 @@ const TRANSLATIONS = {
     'toast.compareCleared': 'Taqqoslash ro\'yxati tozalandi',
     'toast.compareLimit': 'Bir vaqtning o\'zida 4 tagacha tovarni taqqoslash mumkin',
 
-    'footer.blurb': 'O\'zbekistonda mebel, texnika va qurilish materiallari narx agregatori. Marketpleyslar takliflarini taqqoslang va tejamli xarid qiling.',
+    'footer.blurb': 'ArzonOL — O\'zbekistonda mebel, texnika va qurilish materiallari narx agregatori. Marketpleyslar takliflarini taqqoslang va tejamli xarid qiling.',
     'footer.disclaimer': 'Diqqat: saytdagi narxlar va mavjudlik ma\'lumotlari ko\'rgazmali bo\'lib, ommaviy oferta hisoblanmaydi.',
     'footer.shop': 'Katalog',
     'footer.help': 'Yordam',
@@ -266,7 +267,7 @@ const TRANSLATIONS = {
     'footer.link.partners': 'Maydonlarni ulash',
     'footer.legal': 'Maxfiylik siyosati · Shartlar · Demo versiya',
 
-    'cookie.text': 'Kuzatilayotgan va taqqoslash ro\'yxatlarini saqlash uchun cookies ishlatamiz. Batafsil —',
+    'cookie.text': 'ArzonOL kuzatilayotgan va taqqoslash ro\'yxatlarini saqlash uchun cookies ishlatadi. Batafsil —',
     'cookie.link': 'maxfiylik siyosatida',
     'cookie.accept': 'Hammasini qabul qilish',
     'cookie.reject': 'Faqat zarurlari',
@@ -380,7 +381,7 @@ const TRANSLATIONS = {
     'toast.compareCleared': 'Comparison list cleared',
     'toast.compareLimit': 'You can compare up to 4 products at once',
 
-    'footer.blurb': 'Price aggregator for furniture, appliances and building materials in Uzbekistan. Compare marketplace offers and save more.',
+    'footer.blurb': 'ArzonOL — price aggregator for furniture, appliances and building materials in Uzbekistan. Compare marketplace offers and save more.',
     'footer.disclaimer': 'Note: All prices and product availability are demonstrational and do not constitute a public offer.',
     'footer.shop': 'Catalog',
     'footer.help': 'Help',
@@ -399,7 +400,7 @@ const TRANSLATIONS = {
     'footer.link.partners': 'For marketplaces',
     'footer.legal': 'Privacy policy · Terms · Demo version',
 
-    'cookie.text': 'We use cookies to save your tracked prices and comparison items. Read more in our',
+    'cookie.text': 'ArzonOL uses cookies to save your tracked prices and comparison items. Read more in our',
     'cookie.link': 'privacy policy',
     'cookie.accept': 'Accept all',
     'cookie.reject': 'Essential only',
@@ -412,7 +413,7 @@ const TRANSLATIONS = {
 
 /* Текущий язык */
 function detectLang() {
-  const saved = localStorage.getItem('bozor:lang');
+  const saved = localStorage.getItem('arzonol:lang') || localStorage.getItem('bozor:lang');
   if (saved && TRANSLATIONS[saved]) return saved;
   const nav = (navigator.language || 'ru').slice(0, 2);
   return TRANSLATIONS[nav] ? nav : 'ru';
@@ -453,7 +454,7 @@ function formatDelivery(days) {
 function setLang(lang) {
   if (!TRANSLATIONS[lang]) return;
   LANG = lang;
-  localStorage.setItem('bozor:lang', lang);
+  localStorage.setItem('arzonol:lang', lang);
   document.documentElement.lang = t('html.lang');
 }
 

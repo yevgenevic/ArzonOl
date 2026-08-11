@@ -35,11 +35,11 @@ const store = {
 };
 
 const state = {
-  favorites: new Set(store.read('bozor:favorites', [])),
-  compare: new Set(store.read('bozor:compare', [])),
-  region: store.read('bozor:region', 'tashkent'),
-  theme: store.read('bozor:theme', 'light'),
-  sort: store.read('bozor:sort', 'priceAsc'),
+  favorites: new Set(store.read('arzonol:favorites', store.read('bozor:favorites', []))),
+  compare: new Set(store.read('arzonol:compare', store.read('bozor:compare', []))),
+  region: store.read('arzonol:region', store.read('bozor:region', 'tashkent')),
+  theme: store.read('arzonol:theme', store.read('bozor:theme', 'light')),
+  sort: store.read('arzonol:sort', store.read('bozor:sort', 'priceAsc')),
   inStockOnly: false,
   platformFilter: null,
   filter: null,
@@ -47,11 +47,11 @@ const state = {
 };
 
 const persist = () => {
-  store.write('bozor:favorites', [...state.favorites]);
-  store.write('bozor:compare', [...state.compare]);
-  store.write('bozor:region', state.region);
-  store.write('bozor:theme', state.theme);
-  store.write('bozor:sort', state.sort);
+  store.write('arzonol:favorites', [...state.favorites]);
+  store.write('arzonol:compare', [...state.compare]);
+  store.write('arzonol:region', state.region);
+  store.write('arzonol:theme', state.theme);
+  store.write('arzonol:sort', state.sort);
 };
 
 /* --------------------------------------------------------------------------
@@ -1121,7 +1121,7 @@ function wireEvents() {
 
   $$('[data-cookie]').forEach(btn => {
     btn.addEventListener('click', () => {
-      store.write('bozor:cookies', btn.dataset.cookie);
+      store.write('arzonol:cookies', btn.dataset.cookie);
       const bar = $('#cookie');
       bar.classList.add('is-hiding');
       setTimeout(() => { bar.hidden = true; }, 240);
@@ -1150,6 +1150,6 @@ wireEvents();
 
 $('#sort-select').value = state.sort;
 
-if (!store.read('bozor:cookies', null)) {
+if (!store.read('arzonol:cookies', store.read('bozor:cookies', null))) {
   setTimeout(() => { $('#cookie').hidden = false; }, 900);
 }
