@@ -35,20 +35,17 @@ const REGIONS = [
 const regionOf = id => REGIONS.find(r => r.id === id) || REGIONS[0];
 
 const CATEGORIES = [
-  { id: 'mebel',    icon: '#b0553f', glyph: 'bed', accentColor: '#d97706',
-    image3d: '/assets/img/cat-furniture-3d.jpg',
+  { id: 'mebel',    icon: '#b0553f', glyph: 'bed',
     label: { ru: 'Мебель',         uz: 'Mebel',                 en: 'Furniture' },
     hint:  { ru: 'диваны, шкафы, столы',
              uz: 'divanlar, shkaflar, stollar',
              en: 'sofas, wardrobes, tables' } },
-  { id: 'qurilish', icon: '#7a9a6b', glyph: 'house', accentColor: '#059669',
-    image3d: '/assets/img/cat-building-3d.jpg',
+  { id: 'qurilish', icon: '#7a9a6b', glyph: 'house',
     label: { ru: 'Стройматериалы', uz: 'Qurilish materiallari', en: 'Building materials' },
     hint:  { ru: 'отделка, крепёж, смеси',
              uz: 'pardoz, mahkamlagich, aralashmalar',
              en: 'finishing, fasteners, mixes' } },
-  { id: 'texnika',  icon: '#2f6fd0', glyph: 'monitor', accentColor: '#2563eb',
-    image3d: '/assets/img/cat-appliances-3d.jpg',
+  { id: 'texnika',  icon: '#2f6fd0', glyph: 'monitor',
     label: { ru: 'Техника',        uz: 'Texnika',               en: 'Appliances' },
     hint:  { ru: 'кухня, климат, уборка',
              uz: 'oshxona, iqlim, tozalash',

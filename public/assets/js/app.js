@@ -196,23 +196,11 @@ function renderCategories() {
   $('#cats-grid').innerHTML = CATEGORIES.map(c => {
     const count = PRODUCTS.filter(p => p.cat === c.id).length;
     return `
-      <button class="cat-card-3d" type="button" data-cat="${c.id}" style="--cat-accent:${c.accentColor}">
-        <div class="cat-card-3d__content">
-          <div class="cat-card-3d__badge">
-            <span class="cat-card-3d__dot"></span>
-            <span>${count} ${plural(count)}</span>
-          </div>
-          <h3 class="cat-card-3d__title">${tr(c.label)}</h3>
-          <p class="cat-card-3d__hint">${tr(c.hint)}</p>
-          <div class="cat-card-3d__cta">
-            <span>${t('cats.action')}</span>
-            <svg class="cat-card-3d__arrow"><use href="#i-arrow-right"/></svg>
-          </div>
-        </div>
-        <div class="cat-card-3d__visual">
-          <div class="cat-card-3d__glow" aria-hidden="true"></div>
-          <img class="cat-card-3d__img" src="${c.image3d}" alt="${tr(c.label)}" loading="lazy">
-        </div>
+      <button class="cat" type="button" data-cat="${c.id}" style="--cat:${c.icon}">
+        <span class="cat__blob" aria-hidden="true"></span>
+        <span class="cat__icon">${icon(c.glyph)}</span>
+        <span class="cat__name">${tr(c.label)}</span>
+        <span class="cat__meta">${count} ${plural(count)} · ${tr(c.hint)}</span>
       </button>`;
   }).join('');
 

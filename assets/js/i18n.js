@@ -67,7 +67,6 @@ const TRANSLATIONS = {
     'section.all': 'Все товары',
     'cats.title': 'Категории',
     'cats.sub': 'Выберите раздел — откроется каталог',
-    'cats.action': 'Смотреть цены',
     'bestsellers.title': 'Популярные товары',
     'bestsellers.sub': 'С максимальной выгодой за месяц',
 
@@ -201,7 +200,6 @@ const TRANSLATIONS = {
     'section.all': 'Barcha tovarlar',
     'cats.title': 'Kategoriyalar',
     'cats.sub': 'Bo\'limni tanlang — katalog ochiladi',
-    'cats.action': 'Narxlarni ko\'rish',
     'bestsellers.title': 'Ommabop tovarlar',
     'bestsellers.sub': 'Oy davomida eng katta tejamkorlik bilan',
 
@@ -335,7 +333,6 @@ const TRANSLATIONS = {
     'section.all': 'All products',
     'cats.title': 'Categories',
     'cats.sub': 'Pick a section — the catalog opens',
-    'cats.action': 'Compare prices',
     'bestsellers.title': 'Popular items',
     'bestsellers.sub': 'With highest monthly savings',
 

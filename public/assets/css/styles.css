@@ -925,157 +925,53 @@ ul { margin: 0; padding: 0; list-style: none; }
   gap: var(--element-gap);
 }
 
-.cat-card-3d {
+.cat {
   position: relative;
   overflow: hidden;
-  min-height: 200px;
+  min-height: 220px;
   padding: var(--spacing-24);
   background: var(--surface-surface);
-  border-radius: var(--radius-2xl-2);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  display: flex;
-  justify-content: space-between;
-  align-items: stretch;
-  text-align: left;
-  border: 1px solid var(--color-faint-border);
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease;
-  cursor: pointer;
-}
-
-.cat-card-3d:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12);
-  border-color: var(--cat-accent);
-}
-
-.cat-card-3d__content {
+  border-radius: var(--radius-cards);
+  box-shadow: var(--shadow-sm-2);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  z-index: 2;
-  flex: 1;
-  min-width: 0;
+  align-items: flex-start;
+  text-align: left;
+  border: 1px solid var(--color-faint-border);
+  transition: transform 240ms cubic-bezier(.2, .7, .3, 1), box-shadow 240ms ease;
 }
 
-.cat-card-3d__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  background: rgba(0, 0, 0, 0.04);
-  border-radius: var(--radius-full);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-ink-black);
-  width: fit-content;
-}
+.cat:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
 
-.cat-card-3d__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--cat-accent);
-}
-
-.cat-card-3d__title {
-  margin: 12px 0 4px;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.04em;
-  color: var(--color-ink-black);
-  line-height: 1.2;
-}
-
-.cat-card-3d__hint {
-  margin: 0;
-  font-size: 13px;
-  color: var(--color-muted-gray);
-  line-height: 1.4;
-}
-
-.cat-card-3d__cta {
-  margin-top: 16px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--cat-accent);
-}
-
-.cat-card-3d__arrow {
-  width: 14px;
-  height: 14px;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.cat-card-3d:hover .cat-card-3d__arrow {
-  transform: translateX(4px);
-}
-
-.cat-card-3d__visual {
-  position: relative;
-  width: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  margin-left: 12px;
-}
-
-.cat-card-3d__glow {
+.cat__blob {
   position: absolute;
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: var(--cat-accent);
+  top: -56px; right: -56px;
+  width: 190px; height: 190px;
+  border-radius: var(--radius-full);
+  background: var(--cat);
   opacity: 0.22;
-  filter: blur(20px);
   pointer-events: none;
-  transition: transform 0.4s ease, opacity 0.4s ease;
+  transition: transform 400ms cubic-bezier(.2, .7, .3, 1);
 }
 
-.cat-card-3d:hover .cat-card-3d__glow {
-  transform: scale(1.35);
-  opacity: 0.38;
+.cat:hover .cat__blob { transform: scale(1.12); }
+.cat__icon svg { width: var(--spacing-32); height: var(--spacing-32); color: var(--color-ink-black); }
+
+.cat__name {
+  margin-top: auto;
+  font-size: 22px;
+  line-height: var(--leading-xl);
+  font-weight: var(--grade-semibold);
+  letter-spacing: -0.05em;
 }
 
-.cat-card-3d__img {
-  width: 105px;
-  height: 105px;
-  object-fit: cover;
-  border-radius: var(--radius-xl-2);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  position: relative;
-  z-index: 1;
-  transform: rotate(-3deg);
-  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease;
+.cat__meta {
+  margin-top: var(--spacing-4);
+  font-size: var(--text-body-sm);
+  color: var(--color-muted-gray);
 }
 
-.cat-card-3d:hover .cat-card-3d__img {
-  transform: scale(1.12) rotate(4deg) translateY(-4px);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22);
-}
-
-.cat-card-3d.is-active {
-  border-color: var(--cat-accent);
-  box-shadow: 0 0 0 2px var(--cat-accent), 0 8px 24px rgba(0, 0, 0, 0.08);
-}
-
-[data-theme="dark"] .cat-card-3d {
-  background: var(--surface-surface);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-[data-theme="dark"] .cat-card-3d__badge {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--color-ink-black);
-}
-
-[data-theme="dark"] .cat-card-3d__glow {
-  opacity: 0.35;
-  filter: blur(28px);
-}
+.cat.is-active { box-shadow: var(--shadow-sm-2), inset 0 0 0 2px var(--color-shop-violet); }
 
 /* --------------------------------------------------------------------------
    Секции и Карточки товаров
