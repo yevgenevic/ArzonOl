@@ -47,7 +47,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   const url = `http://localhost:${PORT}`;
-  console.log(`Bozor Aggregator is running at: ${url}`);
+  console.log(`ArzonOL Aggregator is running at: ${url}`);
 
   // Open default browser on Windows
   exec(`start ${url}`);
