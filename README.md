@@ -2,10 +2,10 @@
   <img src="logo.png" alt="ArzonOL Logo" width="200"/>
 </p>
 
-<h1 align="center">ArzonOL — Агрегатор цен 💰</h1>
+<h1 align="center">ArzonOL — Narxlar agregatori 💰</h1>
 
 <p align="center">
-  <em>Сравнение цен на мебель, технику и стройматериалы по маркетплейсам Узбекистана.</em>
+  <em>O'zbekiston marketpleyslarida mebel, texnika va qurilish materiallari narxlarini solishtirish.</em>
 </p>
 
 <p align="center">
@@ -17,139 +17,139 @@
 
 ---
 
-## 📌 О проекте
+## 📌 Loyiha haqida
 
-**ArzonOL** — это платформа для умного шоппинга. Сайт ничего не продаёт, а лишь показывает, где нужный вам товар стоит дешевле, и перенаправляет на выбранную площадку.
+**ArzonOL** — bu aqlli xaridlar uchun platforma. Sayt hech narsa sotmaydi, faqat kerakli tovar qayerda arzonroq ekanini ko'rsatadi va tanlangan do'konga yo'naltiradi.
 
-## ✨ Ключевые возможности
+## ✨ Asosiy imkoniyatlar
 
-- 🔍 **Умный поиск и сравнение:** Находите лучшие предложения по всему Узбекистану.
-- 🔒 **Приватность цен:** Гости видят только количество предложений. Сами цены и история доступны **только** авторизованным пользователям (защита на уровне сервера, а не просто визуальное скрытие через CSS).
-- 📊 **Отслеживание цен:** Добавляйте товары в избранное с желаемым порогом цены.
-- 🌍 **Мультиязычность:** Поддержка RU, UZ, EN прямо из коробки.
-- 📈 **Мощная админка:** Сводка по спросу, топы запросов и статистика по регионам.
+- 🔍 **Aqlli qidiruv va solishtirish:** Butun O'zbekiston bo'ylab eng yaxshi takliflarni toping.
+- 🔒 **Narxlar maxfiyligi:** Mehmonlar faqat takliflar sonini ko'radi. Narxlarning o'zi va narxlar tarixi **faqat** ro'yxatdan o'tgan foydalanuvchilar uchun mavjud (bu CSS orqali vizual yashirish emas, balki server darajasidagi himoya).
+- 📊 **Narxlarni kuzatish:** Tovarlarni o'zingiz xohlagan narx chegarasi bilan saralanganlarga qo'shing.
+- 🌍 **Ko'p tillilik:** O'zbek (UZ), Rus (RU) va Ingliz (EN) tillarini qo'llab-quvvatlash.
+- 📈 **Kuchli admin panel:** Talab bo'yicha hisobotlar, eng ko'p qidirilgan so'rovlar va hududlar bo'yicha statistika.
 
 ---
 
-## 🛠 Технологии
+## 🛠 Texnologiyalar
 
-**Бэкенд:**
+**Backend:**
 - [Python 3.11+](https://www.python.org/)
-- [FastAPI](https://fastapi.tiangolo.com/) (включая `auth`, работу со `scrypt` и сессиями)
+- [FastAPI](https://fastapi.tiangolo.com/) (`auth`, `scrypt` va sessiyalar bilan ishlashni o'z ichiga oladi)
 - [SQLite](https://sqlite.org/index.html)
 
-**Фронтенд:**
+**Frontend:**
 - Vanilla HTML / CSS / JS
-- Современные CSS-токены для темизации
+- Dizayn uchun zamonaviy CSS-tokenlar
 
 ---
 
-## 🚀 Установка и запуск
+## 🚀 O'rnatish va ishga tushirish
 
-Для работы приложения потребуется **Python 3.11+** и **Node.js** (последний нужен только если вы хотите запустить проект через Node сервер).
+Ilovani ishlatish uchun **Python 3.11+** va **Node.js** talab qilinadi (Node.js faqat loyihani Node serveri orqali ishga tushirmoqchi bo'lsangiz kerak bo'ladi).
 
-### 1. Установка зависимостей
+### 1. Bog'liqliklarni o'rnatish
 
 ```bash
 pip install fastapi "uvicorn[standard]" "pydantic[email]"
 ```
 
-### 2. Подготовка базы данных
+### 2. Ma'lumotlar bazasini tayyorlash
 
-Перейдите в папку бэкенда и запустите скрипты инициализации:
+`backend` papkasiga o'ting va initsializatsiya skriptlarini ishga tushiring:
 
 ```bash
 cd backend
 
-# Заливка каталога товаров
+# Tovar katalogini yuklash
 python seed.py
 
-# Создание демо-пользователей и тестовой активности
+# Demo-foydalanuvchilar va test faolligini yaratish
 python seed_demo.py
 ```
 
-### 3. Запуск сервера
+### 3. Serverni ishga tushirish
 
-Бэкенд на FastAPI отдаёт и API, и статику фронтенда (CORS не требуется, дополнительных серверов тоже).
+FastAPI dagi backend API va frontend statikasini uzatadi (CORS talab qilinmaydi, qo'shimcha serverlar ham kerak emas).
 
 ```bash
 python -m uvicorn main:app --reload --port 8000
 ```
 
-Перейдите в браузере по адресу: [http://localhost:8000](http://localhost:8000)
+Brauzerda quyidagi manzilga o'ting: [http://localhost:8000](http://localhost:8000)
 
-> 📘 **API Документация (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
+> 📘 **API Hujjatlar (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 
-## 🔑 Демо-доступ
+## 🔑 Demo kirish
 
-| Роль | Email | Пароль | Доступ к админке |
+| Rol | Email | Parol | Admin panelga kirish |
 | :--- | :--- | :--- | :---: |
-| **Демо-пользователь / Админ** | `demo@arzonol.uz` | `demo1234` | ✅ |
+| **Demo-foydalanuvchi / Admin** | `demo@arzonol.uz` | `demo1234` | ✅ |
 
-Админ-панель доступна по адресу: [/admin](http://localhost:8000/admin) (только для аккаунтов с `is_admin = 1`).
+Admin panel manzili: [/admin](http://localhost:8000/admin) (faqat `is_admin = 1` bo'lgan hisoblar uchun).
 
 ---
 
-## 📁 Структура проекта
+## 📁 Loyiha tuzilmasi
 
 ```text
-├── index.html                  # Главная страница
+├── index.html                  # Asosiy sahifa
 ├── assets/
-│   ├── css/                    # Стили и дизайн-токены (:root)
-│   ├── js/i18n.js              # Переводы (ru / uz / en)
-│   ├── js/data.js              # Клиент API и расчёты предложений
-│   ├── js/app.js               # Рендер и логика интерфейса
-│   └── img/products/           # Фото товаров (хранятся локально)
+│   ├── css/                    # Uslublar va dizayn-tokenlar (:root)
+│   ├── js/i18n.js              # Tarjimalar (ru / uz / en)
+│   ├── js/data.js              # API mijozi va takliflar hisobi
+│   ├── js/app.js               # Render va interfeys mantiqiy qismi
+│   └── img/products/           # Tovar rasmlari (lokal saqlanadi)
 ├── backend/
-│   ├── main.py                 # FastAPI: auth, каталог, трекинг, аналитика
-│   ├── db.py                   # Схема SQLite
-│   ├── auth.py                 # Пароли (scrypt) и сессии
-│   ├── seed.py                 # Заливка каталога из assets/js/data.js
-│   └── arzonol.db              # База данных (создаётся автоматически)
+│   ├── main.py                 # FastAPI: auth, katalog, treking, analitika
+│   ├── db.py                   # SQLite sxemasi
+│   ├── auth.py                 # Parollar (scrypt) va sessiyalar
+│   ├── seed.py                 # assets/js/data.js dan katalogni yuklash
+│   └── arzonol.db              # Ma'lumotlar bazasi (avtomatik yaratiladi)
 ```
 
 ---
 
-## 🧠 Архитектура и безопасность
+## 🧠 Arxitektura va xavfsizlik
 
-### Гейт на ценах
-Цены и история отдаются только авторизованным пользователям. Для гостей API возвращает только `offersCount`, чтобы фронтенд мог размыть нужные строки.
-> 🛡️ **Важно:** Блокировка происходит на уровне бэкенда! Инспектор браузера не поможет "взломать" размытие, так как данных просто нет в ответе.
+### Narxlar shlyuzi
+Narxlar va tarix faqat avtorizatsiyadan o'tgan foydalanuvchilarga beriladi. Mehmonlar uchun API faqat `offersCount` qaytaradi, shunda frontend kerakli qatorlarni xiralashtirishi (blur) mumkin.
+> 🛡️ **Muhim:** Bloklash backend darajasida amalga oshiriladi! Brauzer inspektori xiralashuvni "buzib kirishga" yordam bermaydi, chunki ma'lumotlar javobda umuman yo'q.
 
-### База данных
-- **Пользователи и сессии:** `users`, `sessions`
-- **Справочники:** `categories`, `platforms`, `regions`
-- **Каталог:** `products`, `product_images`, `offers`, `price_history`
-- **Пользовательская активность:** `tracked_products`, `compare_items`, `search_queries`, `product_views`
+### Ma'lumotlar bazasi
+- **Foydalanuvchilar va sessiyalar:** `users`, `sessions`
+- **Ma'lumotnomalar:** `categories`, `platforms`, `regions`
+- **Katalog:** `products`, `product_images`, `offers`, `price_history`
+- **Foydalanuvchi faolligi:** `tracked_products`, `compare_items`, `search_queries`, `product_views`
 
-> 💡 **Фотографии** лежат файлами на диске (`assets/img/products/`). В базе хранится только путь. Хранение BLOB в SQLite сильно замедлило бы запросы.
+> 💡 **Rasmlar** diskda fayl ko'rinishida yotadi (`assets/img/products/`). Bazada faqat ularning yo'li saqlanadi. BLOB larni SQLite da saqlash so'rovlarni juda sekinlashtirgan bo'lardi.
 
-Каталог заливается из `assets/js/data.js`, чтобы фронтенд и база всегда были синхронизированы. Скрипт `seed.py` идемпотентный: он пересоздаёт каталог, но не трогает пользователей.
-
----
-
-## 👤 Личный кабинет
-
-Доступен по клику на имя в шапке. Включает 3 вкладки:
-1. **Отслеживание:** Товары с желаемыми порогами цен.
-2. **История:** Просмотры и запросы.
-3. **Настройки:** Профиль и смена пароля (при смене закрываются все остальные сеансы).
+Katalog `assets/js/data.js` dan yuklanadi, shuning uchun frontend va baza doimo sinxron bo'ladi. `seed.py` skripti idempotent: u katalogni qayta yaratadi, lekin foydalanuvchilarga tegmaydi.
 
 ---
 
-## 🛠 Админ-панель
+## 👤 Shaxsiy kabinet
 
-Панель по адресу `/admin` показывает детальную сводку:
-- Количество пользователей и отслеживаний
-- Топ поисковых запросов
-- Распределение спроса по регионам и ожидаемым ценам
-
-Данные отдаёт эндпоинт `GET /api/stats/full` (возвращает статус 403 для пользователей без прав администратора).
+Bosh qismdagi ism ustiga bosish orqali kirish mumkin. 3 ta sahifani o'z ichiga oladi:
+1. **Kuzatish:** Xohlagan narx chegaralariga ega tovarlar.
+2. **Tarix:** Ko'rishlar va qidiruv so'rovlari.
+3. **Sozlamalar:** Profil va parolni o'zgartirish (parol o'zgarganda boshqa barcha sessiyalar yopiladi).
 
 ---
 
-## ⚠️ Важное замечание
+## 🛠 Admin-panel
 
-Цены и наличие товаров на сайте — **демонстрационные данные** и не являются публичной офертой. Все названия маркетплейсов принадлежат их законным владельцам.
+`/admin` manzilidagi panel batafsil hisobotni ko'rsatadi:
+- Foydalanuvchilar va kuzatishlar soni
+- Eng ko'p qidirilgan so'rovlar
+- Hududlar va kutilayotgan narxlar bo'yicha talab taqsimoti
+
+Ma'lumotlar `GET /api/stats/full` orqali beriladi (admin huquqiga ega bo'lmagan foydalanuvchilarga 403 status qaytariladi).
+
+---
+
+## ⚠️ Muhim eslatma
+
+Saytdagi tovarlar narxi va mavjudligi — **demo ma'lumotlar** va ommaviy ofera hisoblanmaydi. Barcha marketpleys nomlari ularning qonuniy egalariga tegishli.
