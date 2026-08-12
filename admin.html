@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ArzonOL — админ-панель</title>
+<link rel="icon" type="image/png" href="/assets/img/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/styles.css">
+<style>
+  .stats { max-width: var(--page-max-width); margin: 0 auto; padding: var(--spacing-40) var(--spacing-24) var(--spacing-64); }
+
+  .stats__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--spacing-16); margin-bottom: var(--spacing-8); }
+  .stats__title { margin: 0; font-size: 32px; line-height: var(--leading-xl); font-weight: var(--grade-semibold); letter-spacing: -0.05em; }
+  .stats__back { font-size: var(--text-body); font-weight: var(--grade-medium); color: var(--color-shop-violet); }
+  .stats__sub { margin: 0 0 var(--spacing-32); font-size: var(--text-body); color: var(--color-muted-gray); letter-spacing: -0.014em; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--element-gap); margin-bottom: var(--spacing-32); }
+  .tile-stat { background: var(--surface-surface); border: 1px solid var(--color-faint-border); border-radius: var(--radius-cards); padding: var(--spacing-20); }
+  .tile-stat__value { font-size: 32px; line-height: 1.1; font-weight: var(--grade-semibold); letter-spacing: -0.05em; }
+  .tile-stat__label { margin-top: var(--spacing-6); font-size: var(--text-body-sm); font-weight: var(--grade-medium); letter-spacing: -0.017em; color: var(--color-muted-gray); }
+
+  .panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--element-gap); }
+  .panel { background: var(--surface-surface); border: 1px solid var(--color-faint-border); border-radius: var(--radius-cards); padding: var(--spacing-20); }
+  .panel__title { margin: 0 0 var(--spacing-16); font-size: var(--text-body-lg); font-weight: var(--grade-semibold); letter-spacing: -0.031em; }
+
+  .bar-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: var(--spacing-8); align-items: center; margin-bottom: var(--spacing-10); }
+  .bar-row__label { font-size: var(--text-body-sm); font-weight: var(--grade-medium); letter-spacing: -0.017em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-row__count { font-size: var(--text-body-sm); font-weight: var(--grade-semibold); color: var(--color-muted-gray); }
+  .bar { grid-column: 1 / -1; height: 6px; border-radius: var(--radius-full); background: var(--surface-canvas); overflow: hidden; }
+  .bar span { display: block; height: 100%; border-radius: var(--radius-full); background: var(--color-shop-violet); }
+
+  .list-row { display: flex; align-items: center; gap: var(--spacing-12); padding: var(--spacing-8) 0; border-bottom: 1px solid var(--color-faint-border); }
+  .list-row:last-child { border-bottom: 0; }
+  .list-row img { width: var(--spacing-40); height: var(--spacing-40); border-radius: var(--element-gap); object-fit: cover; flex: none; }
+  .list-row__main { min-width: 0; flex: 1; }
+  .list-row__name { font-size: var(--text-body-sm); font-weight: var(--grade-semibold); letter-spacing: -0.017em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .list-row__meta { font-size: 11px; color: var(--color-muted-gray); }
+  .list-row__value { font-size: var(--text-body-sm); font-weight: var(--grade-semibold); white-space: nowrap; }
+
+  .stats__note { margin-top: var(--spacing-32); font-size: var(--text-body-sm); color: var(--color-muted-gray); letter-spacing: -0.017em; }
+</style>
+</head>
+<body>
+
+<div class="stats">
+  <div class="stats__head">
+    <h1 class="stats__title">Админ-панель</h1>
+    <a class="stats__back" href="/">← на витрину</a>
+  </div>
+  <p class="stats__sub">Что ArzonOL собрал о спросе. Доступно только администратору.</p>
+
+  <div class="tiles" id="tiles"></div>
+  <div class="panels" id="panels"></div>
+
+  <p class="stats__note">
+    Поисковые запросы и просмотры пишутся и для незарегистрированных: аналитика спроса
+    не требует аккаунта. Целевая цена — то, что человек назвал сам, самый ценный сигнал.
+  </p>
+</div>
+
+<script>
+const fmt = n => Number(n).toLocaleString('ru-RU');
+
+const tile = (value, label) =>
+  `<div class="tile-stat"><div class="tile-stat__value">${fmt(value)}</div><div class="tile-stat__label">${label}</div></div>`;
+
+function barPanel(title, rows, max) {
+  const body = rows.length ? rows.map(r => `
+    <div class="bar-row">
+      <span class="bar-row__label">${r.label}</span>
+      <span class="bar-row__count">${fmt(r.count)}</span>
+      <span class="bar"><span style="width:${Math.round((r.count / max) * 100)}%"></span></span>
+    </div>`).join('') : '<p class="list-row__meta">Пока пусто</p>';
+  return `<div class="panel"><h2 class="panel__title">${title}</h2>${body}</div>`;
+}
+
+(async () => {
+  const token = localStorage.getItem('arzonol:token');
+  const res = await fetch('/api/stats/full', {
+    headers: token ? { Authorization: 'Bearer ' + token } : {}
+  });
+
+  if (res.status === 401 || res.status === 403) {
+    document.querySelector('.stats').innerHTML =
+      '<div class="stats__head"><h1 class="stats__title">Нет доступа</h1>'
+      + '<a class="stats__back" href="/">← на витрину</a></div>'
+      + '<p class="stats__sub">Войдите на сайте под учётной записью администратора, затем вернитесь сюда.</p>';
+    return;
+  }
+
+  const d = await res.json();
+
+  document.getElementById('tiles').innerHTML =
+      tile(d.users, 'пользователей')
+    + tile(d.tracked, 'отслеживаний цены')
+    + tile(d.withTarget, 'с названной ценой')
+    + tile(d.searches, 'поисковых запросов')
+    + tile(d.views, 'просмотров товаров')
+    + tile(d.offers, 'предложений в базе');
+
+  const topQ = d.topQueries.map(q => ({ label: q.query, count: q.count }));
+  const topV = d.topViewed.map(p => ({ label: p.title, count: p.views }));
+  const reg  = d.byRegion.map(r => ({ label: r.region, count: r.count }));
+
+  const wanted = d.mostWanted.length
+    ? d.mostWanted.map(p => `
+        <div class="list-row">
+          <img src="${p.image}" alt="" loading="lazy">
+          <div class="list-row__main">
+            <div class="list-row__name">${p.title}</div>
+            <div class="list-row__meta">${p.brand} · сейчас ${fmt(p.current)} сум</div>
+          </div>
+          <div class="list-row__value">ждут ${fmt(p.avgTarget)} сум</div>
+        </div>`).join('')
+    : '<p class="list-row__meta">Пока пусто</p>';
+
+  document.getElementById('panels').innerHTML =
+      barPanel('Что ищут чаще всего', topQ, Math.max(1, ...topQ.map(x => x.count)))
+    + barPanel('Самые просматриваемые товары', topV, Math.max(1, ...topV.map(x => x.count)))
+    + barPanel('Пользователи по регионам', reg, Math.max(1, ...reg.map(x => x.count)))
+    + `<div class="panel"><h2 class="panel__title">За какую цену готовы купить</h2>${wanted}</div>`;
+})().catch(err => {
+  document.getElementById('tiles').innerHTML =
+    '<p class="list-row__meta">Не удалось загрузить: ' + err.message + '</p>';
+});
+</script>
+</body>
+</html>

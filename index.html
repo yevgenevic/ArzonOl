@@ -77,8 +77,29 @@
     <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
     </symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+    </symbol>
     <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M20 6 9 17l-5-5"/>
+    </symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/>
+    </symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+    </symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+    </symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
+    </symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
     </symbol>
   </defs>
 </svg>
@@ -86,20 +107,24 @@
 <!-- Верхний навбар: зафиксирован вверху страницы -->
 <header class="topnav" id="topnav">
   <div class="topnav__inner">
-    <a class="topnav__logo" href="#">
-      <img src="/assets/img/logo.png" alt="ArzonOL" class="topnav__logo-img">
-      <span class="topnav__brand">Arzon<span class="brand-green">OL</span></span>
-    </a>
+    <div class="topnav__brand-wrap">
+      <a class="topnav__logo" href="#" data-nav="home">
+        <img src="/assets/img/logo.png" alt="ArzonOL" class="topnav__logo-img">
+        <span class="topnav__brand">Arzon<span class="brand-green">OL</span></span>
+      </a>
 
-    <!-- Текстовые ссылки категорий -->
-    <nav class="topnav__nav" id="topnav-cats" data-i18n-attr="aria-label:categories.aria"></nav>
+      <!-- Текстовые ссылки категорий: компактные, всегда доступны -->
+      <nav class="topnav__nav" id="topnav-cats" data-i18n-attr="aria-label:categories.aria"></nav>
+    </div>
 
-    <!-- Поиск в шапке при скролле -->
+    <!-- Поиск в шапке: ровный, гармоничный и сбалансированный -->
     <div class="topnav__search" id="topnav-search">
       <form class="search__field search__field--top" id="search-form-top" autocomplete="off" role="search">
+        <svg class="search__icon" aria-hidden="true"><use href="#i-search"/></svg>
         <label class="visually-hidden" for="q-top" data-i18n="search.label"></label>
         <input class="search__input" id="q-top" name="q-top" type="search"
                data-i18n-attr="placeholder:search.placeholder">
+        <span class="search__keyhint" title="Нажмите / для поиска">/</span>
         <button class="search__clear" type="button" id="search-clear-top" hidden data-i18n-attr="aria-label:search.clear"><svg><use href="#i-close"/></svg></button>
         <button class="search__submit" type="submit" data-i18n-attr="aria-label:search.submit"><svg><use href="#i-arrow-right"/></svg></button>
       </form>
@@ -132,6 +157,9 @@
         <span class="topnav__badge" id="badge-compare" hidden>0</span>
       </button>
       <div class="lang" id="lang" role="group" data-i18n-attr="aria-label:lang.aria"></div>
+
+      <!-- Вход / регистрация / меню профиля -->
+      <div class="topnav__auth" id="auth-actions"></div>
     </div>
   </div>
 </header>
@@ -157,9 +185,11 @@
 
         <div class="search" role="search">
           <form class="search__field" id="search-form" autocomplete="off">
+            <svg class="search__icon" aria-hidden="true"><use href="#i-search"/></svg>
             <label class="visually-hidden" for="q" data-i18n="search.label"></label>
             <input class="search__input" id="q" name="q" type="search" aria-describedby="search-hint"
                    data-i18n-attr="placeholder:search.placeholder">
+            <span class="search__keyhint" title="Нажмите / для поиска">/</span>
             <button class="search__clear" type="button" id="search-clear" hidden data-i18n-attr="aria-label:search.clear"><svg><use href="#i-close"/></svg></button>
             <button class="search__submit" type="submit" data-i18n-attr="aria-label:search.submit"><svg><use href="#i-arrow-right"/></svg></button>
           </form>
@@ -208,6 +238,128 @@
         <div class="grid" id="results-grid"></div>
       </section>
 
+      <!-- Личный кабинет (Полноценная выделенная страница профиля) -->
+      <section class="cabinet-page" id="cabinet" hidden aria-labelledby="cabinet-name">
+        <!-- Кнопка возврата к покупкам / каталогу -->
+        <div class="cabinet-page__nav">
+          <button class="cabinet-page__back-btn" type="button" data-nav="home">
+            <svg><use href="#i-arrow-left"/></svg>
+            <span data-i18n="cabinet.back">← Назад к покупкам</span>
+          </button>
+          <div class="cabinet-page__badge">
+            <svg><use href="#i-shield"/></svg>
+            <span data-i18n="cabinet.title">Личный кабинет</span>
+          </div>
+        </div>
+
+        <!-- Карточка профиля / баннер -->
+        <div class="cab-profile-card">
+          <div class="cab-profile-card__user">
+            <div class="cab-profile-card__avatar" id="cabinet-avatar">A</div>
+            <div class="cab-profile-card__meta">
+              <div class="cab-profile-card__name-row">
+                <h2 class="cab-profile-card__name" id="cabinet-name"></h2>
+                <span class="cab-profile-card__role" id="cabinet-role" data-i18n="cabinet.buyer">Покупатель</span>
+              </div>
+              <p class="cab-profile-card__email" id="cabinet-email"></p>
+            </div>
+          </div>
+
+          <div class="cab-profile-card__stats">
+            <div class="cab-stat-box">
+              <span class="cab-stat-box__val" id="cabinet-count">0</span>
+              <span class="cab-stat-box__label" data-i18n="cabinet.tracking">отслеживается</span>
+            </div>
+            <div class="cab-stat-box">
+              <span class="cab-stat-box__val" id="cabinet-reached">0</span>
+              <span class="cab-stat-box__label" data-i18n="cabinet.reachedCount">цели достигнуто</span>
+            </div>
+          </div>
+
+          <div class="cab-profile-card__actions">
+            <a class="btn btn--ghost cab-profile-card__admin" id="cabinet-admin" href="/admin" hidden data-i18n="cabinet.admin"></a>
+            <button class="btn-cab-logout" type="button" id="cab-logout-btn">
+              <svg><use href="#i-close"/></svg>
+              <span data-i18n="auth.logout">Выйти</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Навигационные вкладки кабинета -->
+        <div class="cabinet__tabs" role="tablist">
+          <button class="cab-tab is-active" type="button" data-tab="tracked">
+            <svg><use href="#i-heart"/></svg>
+            <span data-i18n="cabinet.tabTracked">Отслеживаемые</span>
+          </button>
+          <button class="cab-tab" type="button" data-tab="activity">
+            <svg><use href="#i-chart"/></svg>
+            <span data-i18n="cabinet.tabActivity">История</span>
+          </button>
+          <button class="cab-tab" type="button" data-tab="settings">
+            <svg><use href="#i-user"/></svg>
+            <span data-i18n="cabinet.tabSettings">Настройки</span>
+          </button>
+        </div>
+
+        <!-- Вкладка 1: Отслеживаемые товары -->
+        <div class="cabinet__pane" id="pane-tracked">
+          <div class="cabinet__list" id="cabinet-list"></div>
+        </div>
+
+        <!-- Вкладка 2: История просмотров и запросов -->
+        <div class="cabinet__pane" id="pane-activity" hidden>
+          <div class="cab-cols">
+            <div class="cab-card">
+              <h3 class="cab-sub" data-i18n="cabinet.recentViews"></h3>
+              <div id="cabinet-viewed"></div>
+            </div>
+            <div class="cab-card">
+              <h3 class="cab-sub" data-i18n="cabinet.recentSearches"></h3>
+              <div id="cabinet-searches"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Вкладка 3: Настройки аккаунта и смена пароля -->
+        <div class="cabinet__pane" id="pane-settings" hidden>
+          <div class="cab-cols">
+            <form class="cab-form cab-card" id="profile-form">
+              <h3 class="cab-sub" data-i18n="cabinet.myData"></h3>
+              <div class="form-row">
+                <label class="form-label" for="prof-name" data-i18n="auth.nameLabel"></label>
+                <input class="form-input" id="prof-name" type="text" maxlength="80">
+              </div>
+              <div class="form-row">
+                <label class="form-label" for="prof-region" data-i18n="cabinet.region"></label>
+                <div class="select-wrap">
+                  <select class="select" id="prof-region"></select>
+                  <svg class="select-arrow"><use href="#i-chevron-down"/></svg>
+                </div>
+              </div>
+              <p class="cab-msg" id="profile-msg" hidden></p>
+              <button class="btn btn--primary" type="submit" data-i18n="cabinet.save"></button>
+            </form>
+
+            <form class="cab-form cab-card" id="password-form">
+              <h3 class="cab-sub" data-i18n="cabinet.changePassword"></h3>
+              <div class="form-row">
+                <label class="form-label" for="pw-current" data-i18n="cabinet.currentPassword"></label>
+                <input class="form-input" id="pw-current" type="password" required autocomplete="current-password">
+              </div>
+              <div class="form-row">
+                <label class="form-label" for="pw-new" data-i18n="cabinet.newPassword"></label>
+                <input class="form-input" id="pw-new" type="password" required minlength="6" autocomplete="new-password">
+              </div>
+              <p class="cab-msg" id="password-msg" hidden></p>
+              <button class="btn btn--ghost" type="submit" data-i18n="cabinet.save"></button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- Сработавшие цели по цене -->
+      <div class="notif" id="notifications" hidden></div>
+
       <!-- Три категории: точка входа в каталог -->
       <section class="cats" id="cats" aria-labelledby="cats-title">
         <div class="cats__head">
@@ -225,6 +377,9 @@
     <section class="partners" id="partners" aria-labelledby="partners-title">
       <div class="page">
         <div class="partners__head">
+          <div class="partners__badge">
+            <span data-i18n="partners.badge">⚡ 8 маркетплейсов · 120+ брендов</span>
+          </div>
           <h2 class="partners__title" id="partners-title" data-i18n="partners.title"></h2>
           <p class="partners__sub" data-i18n="partners.sub"></p>
         </div>
@@ -296,7 +451,7 @@
       <div class="sheet__thumbs" id="sheet-thumbs"></div>
 
       <!-- График истории цен -->
-      <div class="sheet__chart-box">
+      <div class="sheet__chart-box" id="sheet-chart-box">
         <div class="sheet__chart-header">
           <div class="sheet__chart-title-wrap">
             <svg class="sheet__chart-icon"><use href="#i-chart"/></svg>
@@ -324,7 +479,24 @@
 
       <div class="sheet__offers-section">
         <div class="sheet__offers-heading" data-i18n="sheet.offersTitle"></div>
-        <div class="sheet__offers-table" id="sheet-offers"></div>
+
+        <!-- Список предложений + гейт поверх него для незарегистрированных -->
+        <div class="offers-wrap">
+          <div class="sheet__offers-table" id="sheet-offers"></div>
+
+          <div class="offers-gate" id="offers-gate" hidden>
+            <div class="offers-gate__card">
+              <svg class="offers-gate__icon"><use href="#i-chart"/></svg>
+              <p class="offers-gate__title" data-i18n="gate.title"></p>
+              <p class="offers-gate__text" data-i18n="gate.text"></p>
+              <div class="offers-gate__actions">
+                <button class="btn btn--primary" type="button" data-auth="register" data-i18n="auth.register"></button>
+                <button class="btn btn--ghost" type="button" data-auth="login" data-i18n="auth.login"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <p class="sheet__disclaimer" data-i18n="sheet.disclaimer"></p>
       </div>
 
@@ -414,6 +586,122 @@
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- ArzonOL AI: faqat katalog va xarid tanlovi bo'yicha maslahatchi -->
+<button class="ai-fab" id="ai-assistant-toggle" type="button" aria-controls="ai-assistant" aria-expanded="false">
+  <span class="ai-fab__ring" aria-hidden="true"></span>
+  <span class="ai-fab__glyph" aria-hidden="true">
+    <svg class="ai-fab__spark"><use href="#i-spark"/></svg>
+    <svg class="ai-fab__close"><use href="#i-close"/></svg>
+  </span>
+  <span class="ai-fab__hint" id="ai-fab-hint">Sizga nima yordam kerak?</span>
+</button>
+
+<aside class="ai-assistant" id="ai-assistant" role="dialog" aria-label="ArzonOL AI maslahatchisi" aria-hidden="true">
+  <header class="ai-assistant__head">
+    <span class="ai-assistant__avatar" aria-hidden="true"><svg><use href="#i-spark"/></svg></span>
+    <div class="ai-assistant__id">
+      <strong id="ai-assistant-title">ArzonOL AI</strong>
+      <span class="ai-assistant__status" id="ai-assistant-status">Xarid maslahatchisi</span>
+    </div>
+    <button class="ai-assistant__act" id="ai-assistant-reset" type="button" aria-label="Suhbatni tozalash"><svg><use href="#i-trash"/></svg></button>
+    <button class="ai-assistant__act" id="ai-assistant-close" type="button" aria-label="Yopish"><svg><use href="#i-close"/></svg></button>
+  </header>
+
+  <div class="ai-context" id="ai-assistant-context" hidden></div>
+
+  <div class="ai-assistant__messages" id="ai-assistant-messages" aria-live="polite"></div>
+
+  <div class="ai-assistant__prompts" id="ai-assistant-prompts"></div>
+
+  <form class="ai-assistant__form" id="ai-assistant-form">
+    <label class="sr-only" for="ai-assistant-input">ArzonOL AI ga savol</label>
+    <input id="ai-assistant-input" type="text" maxlength="500" autocomplete="off" placeholder="Masalan: Samsung qayerda arzon?">
+    <button class="ai-assistant__send" type="submit" aria-label="Yuborish"><svg><use href="#i-arrow-right"/></svg></button>
+  </form>
+</aside>
+
+<!-- Модалка входа и регистрации (Премиальный симметричный дизайн) -->
+<div class="overlay overlay--auth" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title" hidden>
+  <div class="auth-card">
+    <button class="auth-card__close" type="button" data-close-auth data-i18n-attr="aria-label:sheet.close" title="Закрыть">
+      <svg><use href="#i-close"/></svg>
+    </button>
+    
+    <!-- Шапка карточки: логотип и заголовок -->
+    <div class="auth-card__head">
+      <div class="auth-card__brand">
+        <img src="/assets/img/logo.png" alt="ArzonOL" class="auth-card__logo-img">
+        <span class="auth-card__brand-name">Arzon<span class="brand-green">OL</span></span>
+      </div>
+      <h2 class="auth-card__title" id="auth-title"></h2>
+      <p class="auth-card__subtitle" id="auth-subtitle"></p>
+    </div>
+
+    <!-- Симметричные вкладки переключения режима -->
+    <div class="auth-tabs" role="tablist">
+      <button class="auth-tab is-active" type="button" id="tab-auth-login" data-auth="login" data-i18n="auth.login">Войти</button>
+      <button class="auth-tab" type="button" id="tab-auth-register" data-auth="register" data-i18n="auth.register">Регистрация</button>
+    </div>
+
+    <form class="auth-card__form" id="auth-form" autocomplete="on">
+      <!-- Имя (для регистрации) -->
+      <div class="auth-field" id="auth-name-row" hidden>
+        <label class="auth-field__label" for="auth-name" data-i18n="auth.nameLabel">Имя</label>
+        <div class="auth-field__wrap">
+          <svg class="auth-field__icon"><use href="#i-user"/></svg>
+          <input class="auth-field__input" id="auth-name" type="text" autocomplete="name" maxlength="80" placeholder="Алишер">
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="auth-field">
+        <label class="auth-field__label" for="auth-email" data-i18n="auth.emailLabel">Email</label>
+        <div class="auth-field__wrap">
+          <svg class="auth-field__icon"><use href="#i-mail"/></svg>
+          <input class="auth-field__input" id="auth-email" type="email" required autocomplete="email" placeholder="name@example.com">
+        </div>
+      </div>
+
+      <!-- Пароль -->
+      <div class="auth-field">
+        <label class="auth-field__label" for="auth-password" data-i18n="auth.passwordLabel">Пароль</label>
+        <div class="auth-field__wrap">
+          <svg class="auth-field__icon"><use href="#i-lock"/></svg>
+          <input class="auth-field__input" id="auth-password" type="password" required minlength="6" autocomplete="current-password" placeholder="••••••••">
+          <button class="auth-field__eye" type="button" id="toggle-auth-pw" aria-label="Показать пароль">
+            <svg><use href="#i-eye"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Сообщение об ошибке -->
+      <div class="auth-card__error" id="auth-error" hidden role="alert"></div>
+
+      <!-- Основная кнопка отправки -->
+      <button class="auth-card__submit" type="submit" id="auth-submit">
+        <span id="auth-submit-label"></span>
+        <svg class="auth-card__submit-arrow"><use href="#i-arrow-right"/></svg>
+      </button>
+
+      <!-- Подсказка переключения -->
+      <p class="auth-card__switch" id="auth-switch"></p>
+
+      <!-- Безопасность / Правовая информация -->
+      <div class="auth-card__security">
+        <svg><use href="#i-shield"/></svg>
+        <span data-i18n="auth.secureNote">Защищено шифрованием scrypt</span>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Показывается, если каталог не загрузился: пустой экран без объяснения хуже -->
+<div class="boot-error" id="boot-error" hidden>
+  <p data-i18n="boot.error"></p>
+  <code id="boot-error-detail"></code>
+  <p data-i18n="boot.hint"></p>
+</div>
 
 <script src="/assets/js/i18n.js"></script>
 <script src="/assets/js/data.js"></script>

@@ -6,7 +6,7 @@
 const $  = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
-const byId  = id => PRODUCTS.find(p => p.id === id);
+// byId объявлен в data.js — здесь только категории
 const catOf = id => CATEGORIES.find(c => c.id === id);
 
 const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
@@ -55,6 +55,126 @@ const persist = () => {
 };
 
 /* --------------------------------------------------------------------------
+   Авторизация
+
+   Токен непрозрачный, живёт в localStorage и уходит в заголовке Authorization.
+   Цены гейтятся на сервере: у гостя их нет в ответе API вообще, поэтому
+   размытие — только визуальная часть, а не защита.
+   -------------------------------------------------------------------------- */
+
+let currentUser = null;
+
+async function restoreSession() {
+  if (!localStorage.getItem('arzonol:token')) return;
+  try {
+    const { user } = await api('/api/auth/me');
+    currentUser = user;
+  } catch {
+    // токен протух или база пересоздана — молча выходим
+    localStorage.removeItem('arzonol:token');
+  }
+}
+
+async function doAuth(mode, payload) {
+  const { token, user } = await api(`/api/auth/${mode}`, { method: 'POST', body: payload, auth: false });
+  localStorage.setItem('arzonol:token', token);
+  currentUser = user;
+
+  // после входа каталог перезапрашивается — теперь с ценами
+  await loadCatalog();
+  await pullUserData();
+  renderAll();
+
+  // Регистрируются чаще всего прямо из гейта в карточке товара. Если её не
+  // перерисовать, человек увидит тот же размытый блок и решит, что ничего
+  // не произошло — ровно так этот баг и выглядел.
+  if (openProductId) fillSheet(byId(openProductId));
+
+  closeAuthModal();
+  checkNotifications();
+  toast(t(mode === 'register' ? 'auth.registered' : 'auth.loggedIn'));
+}
+
+async function logout() {
+  try { await api('/api/auth/logout', { method: 'POST' }); } catch { /* уже невалиден */ }
+  localStorage.removeItem('arzonol:token');
+  currentUser = null;
+  state.favorites.clear();
+  state.compare.clear();
+  await loadCatalog();
+  renderAll();
+  renderNotifications([]);
+  toast(t('auth.loggedOut'));
+}
+
+/* Сработавшие цели по цене. Показываем при входе — это замыкает цикл:
+   человек назвал цену, мы следили, цена достигнута. */
+async function checkNotifications() {
+  if (!currentUser) return;
+  try {
+    const { notifications } = await api('/api/notifications');
+    renderNotifications(notifications);
+  } catch { /* не критично */ }
+}
+
+function renderNotifications(list) {
+  const box = $('#notifications');
+  if (!box) return;
+
+  box.hidden = !list.length;
+  if (!list.length) { box.innerHTML = ''; return; }
+
+  box.innerHTML = `
+    <div class="notif__head">
+      <svg class="notif__icon"><use href="#i-bell"/></svg>
+      <span>${t('notif.title')}</span>
+      <button class="notif__close" type="button" data-close-notif aria-label="${t('sheet.close')}">
+        <svg><use href="#i-close"/></svg>
+      </button>
+    </div>
+    <div class="notif__list">
+      ${list.map(n => {
+        const p = byId(n.product_id);
+        if (!p) return '';
+        return `
+          <button class="notif__item" type="button" data-open="${p.id}">
+            <img src="${p.thumbs[0] || p.image}" alt="" loading="lazy">
+            <span class="notif__text">
+              <span class="notif__name">${p.brand} — ${tr(p.title)}</span>
+              <span class="notif__prices">${t('notif.reached')} ${money(n.current)}
+                <s>${money(n.target)}</s></span>
+            </span>
+          </button>`;
+      }).join('')}
+    </div>`;
+}
+
+/* Отслеживаемые и сравнение переезжают на сервер, как только человек вошёл */
+async function pullUserData() {
+  if (!currentUser) return;
+  try {
+    const [{ tracked }, { compare }] = await Promise.all([api('/api/tracked'), api('/api/compare')]);
+    state.favorites = new Set(tracked.map(r => r.product_id));
+    state.compare = new Set(compare);
+    persist();
+  } catch { /* не критично для показа каталога */ }
+}
+
+function renderAuthUI() {
+  const box = $('#auth-actions');
+  if (!box) return;
+
+  box.innerHTML = currentUser
+    ? `<button class="topnav__user" type="button" id="user-menu-btn" title="${currentUser.email}">
+         <span class="topnav__user-avatar">${(currentUser.name || currentUser.email)[0].toUpperCase()}</span>
+         <span class="topnav__user-name">${currentUser.name || currentUser.email.split('@')[0]}</span>
+       </button>`
+    : `<button class="topnav__btn" type="button" data-auth="login" data-i18n-attr="title:nav.account,aria-label:nav.account" title="${t('nav.account')}">
+         <svg><use href="#i-user"/></svg>
+       </button>`;
+}
+
+/* --------------------------------------------------------------------------
    Темы оформления
    -------------------------------------------------------------------------- */
 
@@ -74,6 +194,7 @@ function toggleTheme() {
 
 function orbitHTML({ id, kind, w }, index, clone) {
   const p = byId(id);
+  if (!p) return '';
   const bare = kind === 'bare';
   const style = `--w:${w}px;animation-delay:${(-index * 0.9).toFixed(1)}s`;
   const hidden = clone ? ' tabindex="-1" aria-hidden="true"' : '';
@@ -90,17 +211,22 @@ function orbitHTML({ id, kind, w }, index, clone) {
   return `<button class="orbit orbit--${kind}" type="button" data-open="${p.id}" style="${style}"${hidden}>${inner}</button>`;
 }
 
+/* Цена для гостя закрыта: показываем призыв войти, а не «от 0 сум» */
+const priceLabel = p => CATALOG_UNLOCKED
+  ? formatPriceFrom(bestOffer(p).price)
+  : `<span class="price-locked">${t('gate.showPrices')}</span>`;
+
 function cardHTML(p, rank) {
   const on = state.favorites.has(p.id) ? ' is-on' : '';
   const badge = rank ? `<span class="card__rank" aria-hidden="true">${rank}</span>` : '';
-  const best = bestOffer(p);
   const sav = savings(p);
 
   const savingsTag = sav.amount > 0
     ? `<span class="card__tag-savings">${t('badge.savings')} ${money(sav.amount)}</span>`
     : '';
 
-  const storesTag = `<span class="card__tag-stores">${p.offers.length} ${t('badge.stores')}</span>`;
+  // offersCount известен и гостю — число площадок не секрет, секрет цены
+  const storesTag = `<span class="card__tag-stores">${offersCount(p)} ${t('badge.stores')}</span>`;
 
   return `
     <div class="card" data-id="${p.id}">
@@ -112,7 +238,7 @@ function cardHTML(p, rank) {
           <div class="card__brand">${p.brand}</div>
           <div class="card__title">${tr(p.title)}</div>
           <div class="card__foot">
-            <span class="card__price">${formatPriceFrom(best.price)}</span>
+            <span class="card__price">${priceLabel(p)}</span>
             <span class="card__rating">${starsHTML(p.rating)}<span>${num(p.reviews)}</span></span>
           </div>
         </div>
@@ -136,9 +262,16 @@ function renderHero() {
 }
 
 function renderLangSwitch() {
+  // На мобильном три кнопки не помещаются в шапку, поэтому там показывается одна:
+  // подписана текущим языком, а ведёт на следующий по кругу
+  const next = LANGS[(LANGS.findIndex(l => l.id === LANG) + 1) % LANGS.length];
+  const current = LANGS.find(l => l.id === LANG) ?? LANGS[0];
+
   $('#lang').innerHTML = LANGS.map(l => `
     <button class="lang__btn${l.id === LANG ? ' is-active' : ''}" type="button"
-            data-lang="${l.id}" title="${l.name}" aria-pressed="${l.id === LANG}">${l.label}</button>`).join('');
+            data-lang="${l.id}" title="${l.name}" aria-pressed="${l.id === LANG}">${l.label}</button>`).join('')
+    + `<button class="lang__cycle" type="button" data-lang="${next.id}"
+               title="${next.name}" aria-label="${next.name}">${current.label}</button>`;
 }
 
 function renderRegionSelector() {
@@ -183,6 +316,10 @@ function renderNav() {
       ${icon('compare')}
       <span>${t('nav.compare')}</span>
       <span class="rail__badge" id="rail-badge-compare" ${state.compare.size ? '' : 'hidden'}>${state.compare.size}</span>
+    </button>
+    <button class="rail__link" type="button" data-nav="account">
+      ${icon('user')}
+      <span>${t('nav.account')}</span>
     </button>
   `;
 }
@@ -254,13 +391,22 @@ const railHTML = inner => `
 
 function renderPartners() {
   const chip = (p, clone) => `
-    <span class="partner"${clone ? ' aria-hidden="true"' : ''}>
-      <span class="partner__dot" style="background:${p.color}"></span>${p.name}
-    </span>`;
+    <div class="partner-card" style="--brand-color:${p.color}" ${clone ? 'aria-hidden="true"' : ''}>
+      <div class="partner-card__logo" style="background:${p.bg}">
+        <span class="partner-card__icon">${p.icon}</span>
+      </div>
+      <div class="partner-card__info">
+        <span class="partner-card__name">${p.name}</span>
+        <span class="partner-card__type">${p.type}</span>
+      </div>
+    </div>`;
 
-  $('#partners-track').innerHTML =
-    PARTNERS.map(p => chip(p, false)).join('') +
-    PARTNERS.map(p => chip(p, true)).join('');
+  const track = $('#partners-track');
+  if (track) {
+    track.innerHTML =
+      PARTNERS.map(p => chip(p, false)).join('') +
+      PARTNERS.map(p => chip(p, true)).join('');
+  }
 }
 
 function initScroller(scroller) {
@@ -336,6 +482,7 @@ function applyView() {
     results.hidden = true;
     sections.hidden = false;
     $('#cats').hidden = false;
+    $('#cabinet').hidden = true;
     renderSections();
     return;
   }
@@ -367,6 +514,7 @@ function renderResults(title, items, emptyText) {
   $('#results').hidden = false;
   $('#sections').hidden = true;
   $('#cats').hidden = true;
+  $('#cabinet').hidden = true;
   $('#results').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -379,7 +527,7 @@ function renderSuggest(q, box) {
       <img class="suggest__thumb" src="${p.thumbs[0]}" alt="" loading="lazy">
       <span>
         <span class="suggest__title">${tr(p.title)}</span><br>
-        <span class="suggest__brand">${p.brand} · ${formatPriceFrom(bestOffer(p).price)}</span>
+        <span class="suggest__brand">${p.brand} · ${priceLabel(p)}</span>
       </span>
     </button>`).join('');
   box.hidden = false;
@@ -390,9 +538,18 @@ function renderSuggest(q, box) {
    -------------------------------------------------------------------------- */
 
 function toggleFav(id) {
+  // Отслеживание цены без аккаунта бессмысленно — некуда слать уведомление
+  if (!currentUser) { openAuthModal('register'); return; }
+
   const on = state.favorites.has(id);
   on ? state.favorites.delete(id) : state.favorites.add(id);
   persist();
+
+  // Сервер — источник правды; локальное состояние обновляем сразу, чтобы
+  // интерфейс не ждал сеть
+  (on ? api(`/api/tracked/${id}`, { method: 'DELETE' })
+      : api('/api/tracked', { method: 'POST', body: { product_id: id } })
+  ).catch(err => console.error('Не удалось сохранить отслеживание:', err));
 
   $$(`[data-fav="${id}"]`).forEach(btn => {
     btn.classList.toggle('is-on', !on);
@@ -417,6 +574,11 @@ function toggleCompare(id) {
 
   on ? state.compare.delete(id) : state.compare.add(id);
   persist();
+
+  if (currentUser) {
+    api('/api/compare', { method: 'PUT', body: [...state.compare] })
+      .catch(err => console.error('Не удалось сохранить сравнение:', err));
+  }
 
   updateSheetCompareBtn(id);
   renderCompareDrawer();
@@ -577,7 +739,7 @@ function closeDialog() {
    сверяемся с фактическим состоянием окон. */
 function syncDialogState() {
   // .map($) передал бы индекс во второй параметр $ (root) — отсюда обёртка
-  const open = ['#alert-modal', '#compare-modal', '#overlay'].map(sel => $(sel)).find(el => el && !el.hidden)
+  const open = ['#auth-modal', '#alert-modal', '#compare-modal', '#overlay'].map(sel => $(sel)).find(el => el && !el.hidden)
             || ($('#drawer').classList.contains('is-open') ? $('#drawer') : null);
   if (!open && activeDialog) closeDialog();
   else if (open) activeDialog = open;
@@ -595,6 +757,15 @@ function openSheet(id) {
   requestAnimationFrame(() => overlay.classList.add('is-open'));
   document.body.style.overflow = 'hidden';
   openDialog(overlay);
+
+  // Помощник должен советовать по тому товару, который перед глазами
+  renderAssistantContext();
+  renderAssistantPrompts();
+
+  // Просмотры пишутся и для гостей, как и поисковые запросы: на них держатся
+  // «Недавно просмотренные» в кабинете и статистика в админке
+  api(`/api/analytics/view/${id}`, { method: 'POST' })
+    .catch(() => { /* аналитика не должна ломать карточку */ });
 }
 
 function fillSheet(p) {
@@ -609,19 +780,18 @@ function fillSheet(p) {
   const best = bestOffer(p);
   const sav = savings(p);
 
-  $('#sheet-price').textContent = formatPriceFrom(best.price);
+  // Цена, выгода и график — часть закрытого блока
+  $('#sheet-price').textContent = CATALOG_UNLOCKED ? formatPriceFrom(best.price) : t('gate.pricesHidden');
+  $('#sheet-price').classList.toggle('is-hidden-price', !CATALOG_UNLOCKED);
+
   const savBadge = $('#sheet-savings');
-  if (sav.amount > 0) {
-    savBadge.textContent = formatSavings(sav.amount, sav.percent);
-    savBadge.hidden = false;
-  } else {
-    savBadge.hidden = true;
-  }
+  savBadge.hidden = !CATALOG_UNLOCKED || sav.amount <= 0;
+  if (!savBadge.hidden) savBadge.textContent = formatSavings(sav.amount, sav.percent);
 
   $('#sheet-desc').textContent = t('sheet.desc');
 
-  // График истории цен
-  renderPriceChart(p);
+  $('#sheet-chart-box').hidden = !CATALOG_UNLOCKED;
+  if (CATALOG_UNLOCKED) renderPriceChart(p);
 
   // Сортировка предложений
   const sortedOffers = [...p.offers].sort((a, b) => {
@@ -631,7 +801,20 @@ function fillSheet(p) {
 
   const bestOfferItem = bestOffer(p);
 
-  $('#sheet-offers').innerHTML = sortedOffers.map(o => {
+  // Гость: цен нет в данных вообще, поэтому рисуем заглушки по offersCount
+  // и накрываем их гейтом. Число строк настоящее — видно, что предложений много.
+  $('#offers-gate').hidden = CATALOG_UNLOCKED;
+  $('#sheet-offers').classList.toggle('is-locked', !CATALOG_UNLOCKED);
+
+  $('#sheet-offers').innerHTML = !CATALOG_UNLOCKED
+    ? Array.from({ length: offersCount(p) || 3 }, () => `
+        <div class="offer-row offer-row--skeleton" aria-hidden="true">
+          <div class="offer-row__platform"><span class="offer-row__dot"></span><span class="skeleton-bar" style="width:88px"></span></div>
+          <div class="offer-row__meta"><span class="skeleton-bar" style="width:64px"></span></div>
+          <div class="offer-row__price"><span class="skeleton-bar" style="width:104px"></span></div>
+          <div class="offer-row__action"><span class="skeleton-bar" style="width:72px;height:30px"></span></div>
+        </div>`).join('')
+    : sortedOffers.map(o => {
     const plat = platformOf(o.platform);
     const isBest = o.inStock && o.platform === bestOfferItem.platform && o.price === bestOfferItem.price;
     const rowClass = `offer-row ${isBest ? 'offer-row--best' : ''} ${!o.inStock ? 'offer-row--out' : ''}`;
@@ -745,6 +928,88 @@ function closeSheet() {
   openProductId = null;
   setTimeout(() => { overlay.hidden = true; }, 200);
   closeDialog();
+
+  renderAssistantContext();
+  renderAssistantPrompts();
+}
+
+/* --------------------------------------------------------------------------
+   Модалка входа и регистрации
+   -------------------------------------------------------------------------- */
+
+let authMode = 'register';
+
+let authOpener = null;
+
+function openAuthModal(mode = 'register') {
+  authMode = mode;
+  const modal = $('#auth-modal');
+  authOpener = document.activeElement;
+
+  $('#auth-title').textContent = t(mode === 'register' ? 'auth.registerTitle' : 'auth.loginTitle');
+  $('#auth-subtitle').textContent = t(mode === 'register' ? 'auth.registerSub' : 'auth.loginSub');
+  $('#auth-submit-label').textContent = t(mode === 'register' ? 'auth.register' : 'auth.login');
+
+  const isReg = mode === 'register';
+  $('#tab-auth-login')?.classList.toggle('is-active', !isReg);
+  $('#tab-auth-register')?.classList.toggle('is-active', isReg);
+
+  $('#auth-switch').innerHTML = isReg
+    ? `${t('auth.haveAccount')} <button type="button" class="link-btn" data-auth="login">${t('auth.login')}</button>`
+    : `${t('auth.noAccount')} <button type="button" class="link-btn" data-auth="register">${t('auth.register')}</button>`;
+
+  $('#auth-name-row').hidden = !isReg;
+  $('#auth-error').hidden = true;
+  $('#auth-form').reset();
+  $('#auth-password').type = 'password';
+
+  modal.hidden = false;
+  requestAnimationFrame(() => modal.classList.add('is-open'));
+  document.body.style.overflow = 'hidden';
+  openDialog(modal);
+}
+
+function closeAuthModal() {
+  const modal = $('#auth-modal');
+  modal.classList.remove('is-open');
+  setTimeout(() => { modal.hidden = true; }, 200);
+
+  // Под входом может лежать открытая карточка товара: тогда фон остаётся
+  // заблокированным, а активным диалогом снова становится она
+  if (openProductId) {
+    activeDialog = $('#overlay');
+    document.body.style.overflow = 'hidden';
+    authOpener?.focus();
+  } else {
+    document.body.style.overflow = '';
+    lastFocused = authOpener;
+    closeDialog();
+  }
+}
+
+async function submitAuth(e) {
+  e.preventDefault();
+  const btn = $('#auth-submit');
+  const err = $('#auth-error');
+  err.hidden = true;
+  btn.disabled = true;
+
+  const payload = {
+    email: $('#auth-email').value.trim(),
+    password: $('#auth-password').value,
+    lang: LANG,
+    region: state.region,
+  };
+  if (authMode === 'register') payload.name = $('#auth-name').value.trim();
+
+  try {
+    await doAuth(authMode, payload);
+  } catch (ex) {
+    err.textContent = ex.message;
+    err.hidden = false;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -752,6 +1017,9 @@ function closeSheet() {
    -------------------------------------------------------------------------- */
 
 function openAlertModal(productId) {
+  // Без аккаунта подписку принять некуда — сначала регистрация
+  if (!currentUser) { openAuthModal('register'); return; }
+
   const p = byId(productId);
   const best = bestOffer(p);
   $('#alert-target-price').value = Math.round(best.price * 0.9);
@@ -827,7 +1095,11 @@ function renderCompareTable() {
     return;
   }
 
-  const products = ids.map(byId);
+  const products = ids.map(byId).filter(Boolean);
+  if (!products.length) {
+    container.innerHTML = `<p class="empty">${t('compare.empty')}</p>`;
+    return;
+  }
   const bundle = totalBundleSavings(ids);
 
   container.innerHTML = `
@@ -835,7 +1107,7 @@ function renderCompareTable() {
       <table class="matrix-table">
         <thead>
           <tr>
-            <th>${t('cats.title')}</th>
+            <th>${t('compare.param.category')}</th>
             ${products.map(p => `
               <th class="matrix-col">
                 <div class="matrix-product-card">
@@ -927,6 +1199,280 @@ function toast(message) {
 }
 
 /* --------------------------------------------------------------------------
+   ArzonOL AI: katalogdagi faktlar asosida xarid maslahati
+   -------------------------------------------------------------------------- */
+
+const AI_COPY = {
+  uz: {
+    title: 'ArzonOL AI', status: 'Xarid maslahatchisi', typing: 'yozmoqda…', placeholder: 'Masalan: Samsung qayerda arzon?',
+    hint: 'Sizga nima yordam kerak?',
+    hello: 'Salom! Men ArzonOL maslahatchisiman. Qaysi tovarni tanlamoqchisiz — narxlarni solishtirib, eng arzonini topaman.',
+    contextHint: 'Shu tovar bo‘yicha savol bering',
+    prompts: [
+      { label: 'Eng tejamkor', text: 'Katalogdagi eng tejamkor tovarni tavsiya qil' },
+      { label: 'Ko‘p sharhli', text: 'Eng ko‘p sharh yig‘gan tovar qaysi?' },
+      { label: 'Taqqoslash', text: 'Marketpleyslarni narx bo‘yicha solishtir' },
+      { label: 'Yetkazish', text: 'Qaysi marketpleys tezroq yetkazadi?' },
+    ],
+    productPrompts: [
+      { label: 'Olsam bo‘ladimi?', text: 'Shu tovarni olsam bo‘ladimi? Maslahat ber' },
+      { label: 'Qayerda arzon?', text: 'Shu tovar qaysi marketpleysda arzonroq?' },
+      { label: 'Sharhlar', text: 'Shu tovarning reytingi va sharhlari qanday?' },
+    ],
+    scope: 'Men faqat ArzonOL katalogi, narxlar, marketpleyslar va xarid tanlovi bo‘yicha yordam bera olaman.',
+    signIn: 'Aniq narxlar va marketpleyslar taqqoslanishi uchun avval tizimga kiring.',
+    askProduct: 'Mahsulot nomini yozing. Masalan: “Samsung qayerda arzon?”',
+    compare: 'Tovar nomini yozing — eng arzon taklif, tejaladigan summa, mavjudlik va yetkazishni solishtiraman.',
+    noBonus: 'Hozir katalogda bonuslar haqida ma’lumot yo‘q. Men narx, mavjudlik, yetkazish va sharhlar bo‘yicha maslahat bera olaman.',
+    offline: 'AI serveri javob bermadi — katalog ma’lumotlari asosida javob berdim.',
+    rateLimit: 'Juda ko‘p so‘rov yubordingiz. Bir necha daqiqadan so‘ng urinib ko‘ring.',
+    reviews: 'Eng ko‘p sharh yig‘gan tovar', best: 'eng arzon taklif', save: 'tejam', delivery: 'yetkazish', days: 'kun', reviewsLabel: 'sharh', allTime: 'Bu mahsulotdagi hozirgi eng past narx.',
+  },
+  ru: {
+    title: 'ArzonOL AI', status: 'Помощник покупателя', typing: 'печатает…', placeholder: 'Например: Где дешевле Samsung?',
+    hint: 'Чем помочь с выбором?',
+    hello: 'Здравствуйте! Я помощник ArzonOL. Скажите, что ищете — сравню цены и найду самое выгодное предложение.',
+    contextHint: 'Спросите об этом товаре',
+    prompts: [
+      { label: 'Максимальная выгода', text: 'Посоветуй товар с максимальной выгодой' },
+      { label: 'Больше отзывов', text: 'У какого товара больше всего отзывов?' },
+      { label: 'Сравнить', text: 'Сравни маркетплейсы по ценам' },
+      { label: 'Доставка', text: 'Какой маркетплейс доставляет быстрее?' },
+    ],
+    productPrompts: [
+      { label: 'Стоит брать?', text: 'Стоит ли брать этот товар? Посоветуй' },
+      { label: 'Где дешевле?', text: 'На каком маркетплейсе этот товар дешевле?' },
+      { label: 'Отзывы', text: 'Какой рейтинг и отзывы у этого товара?' },
+    ],
+    scope: 'Я отвечаю только о каталоге ArzonOL, ценах, маркетплейсах и выборе товара.',
+    signIn: 'Войдите в аккаунт, чтобы увидеть точные цены и сравнение маркетплейсов.',
+    askProduct: 'Напишите название товара. Например: «Где дешевле Samsung?»',
+    compare: 'Напишите товар — сравню лучшую цену, экономию, наличие и доставку.',
+    noBonus: 'В каталоге пока нет данных о бонусах. Я могу подсказать по цене, наличию, доставке и отзывам.',
+    offline: 'AI-сервер не ответил — отвечаю по данным каталога.',
+    rateLimit: 'Слишком много запросов. Попробуйте через несколько минут.',
+    reviews: 'Больше всего отзывов у товара', best: 'лучшее предложение', save: 'экономия', delivery: 'доставка', days: 'дн.', reviewsLabel: 'отзывов', allTime: 'Это минимальная текущая цена для товара.',
+  },
+  en: {
+    title: 'ArzonOL AI', status: 'Shopping advisor', typing: 'typing…', placeholder: 'For example: Where is Samsung cheaper?',
+    hint: 'Need help choosing?',
+    hello: 'Hi! I am the ArzonOL advisor. Tell me what you are looking for and I will compare prices to find the best deal.',
+    contextHint: 'Ask about this product',
+    prompts: [
+      { label: 'Best savings', text: 'Recommend the product with the biggest savings' },
+      { label: 'Most reviewed', text: 'Which product has the most reviews?' },
+      { label: 'Compare', text: 'Compare the marketplaces by price' },
+      { label: 'Delivery', text: 'Which marketplace delivers faster?' },
+    ],
+    productPrompts: [
+      { label: 'Worth buying?', text: 'Is this product worth buying? Advise me' },
+      { label: 'Where cheaper?', text: 'Which marketplace sells this product cheaper?' },
+      { label: 'Reviews', text: 'What are the rating and reviews of this product?' },
+    ],
+    scope: 'I can only answer about the ArzonOL catalog, prices, marketplaces, and choosing products.',
+    signIn: 'Please sign in to see exact prices and marketplace comparisons.',
+    askProduct: 'Type a product name, for example: “Where is Samsung cheaper?”',
+    compare: 'Name a product and I will compare the best price, savings, stock, and delivery.',
+    noBonus: 'The catalog does not include bonus data yet. I can advise on price, availability, delivery, and reviews.',
+    offline: 'The AI server did not respond — answering from catalog data.',
+    rateLimit: 'Too many requests. Please try again in a few minutes.',
+    reviews: 'The product with the most reviews is', best: 'best offer', save: 'savings', delivery: 'delivery', days: 'days', reviewsLabel: 'reviews', allTime: 'This is the product’s current lowest price.',
+  }
+};
+
+const aiText = key => AI_COPY[LANG]?.[key] ?? AI_COPY.uz[key];
+const escapeHTML = value => String(value).replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
+
+function assistantProduct(query) {
+  const normalized = query.toLocaleLowerCase();
+  const match = PRODUCTS.map(product => {
+    const terms = `${product.brand} ${Object.values(product.title || {}).join(' ')}`
+      .toLocaleLowerCase().split(/[^\p{L}\p{N}]+/u).filter(term => term.length > 2);
+    return { product, score: terms.reduce((total, term) => total + (normalized.includes(term) ? term.length : 0), 0) };
+  }).sort((left, right) => right.score - left.score)[0];
+  return match?.score ? match.product : null;
+}
+
+function assistantMessage(text, type = 'bot') {
+  const box = $('#ai-assistant-messages');
+  if (!box) return;
+  box.insertAdjacentHTML('beforeend', `<div class="ai-message ai-message--${type}">${escapeHTML(text)}</div>`);
+  box.scrollTop = box.scrollHeight;
+}
+
+function assistantProductAdvice(product) {
+  if (!product) return aiText('askProduct');
+  if (!product.offers?.length) {
+    return `${product.brand} ${tr(product.title)}: ${product.rating.toFixed(1)} / 5, ${product.reviews.toLocaleString('ru-RU')} ${aiText('reviewsLabel')}. ${aiText('signIn')}`;
+  }
+
+  const best = bestOffer(product);
+  const gain = savings(product);
+  const platform = platformOf(best.platform);
+  const trend = priceTrend(product);
+  const parts = [
+    `${product.brand} ${tr(product.title)}: ${aiText('best')} — ${platform.name}, ${money(best.price)}.`,
+    gain.amount ? `${aiText('save')}: ${money(gain.amount)} (${gain.percent}%).` : '',
+    `${aiText('delivery')}: ${calcDeliveryDays(best, state.region)} ${aiText('days')}; ${product.reviews.toLocaleString('ru-RU')} ${aiText('reviewsLabel')}.`,
+    trend.isAllTimeLow ? aiText('allTime') : '',
+  ];
+  return parts.filter(Boolean).join(' ');
+}
+
+function assistantReply(question) {
+  const query = question.trim();
+  const normalized = query.toLocaleLowerCase();
+  const product = assistantProduct(query);
+  const inScope = /arzonol|narx|arzon|qimmat|tovar|mahsulot|market|marketpleys|uzum|olcha|texnomart|mediapark|asaxiy|idea|elmakon|zood|yetkaz|bonus|chegirma|sharh|komment|review|rating|taqqos|mebel|texnika|qurilish/i.test(query) || Boolean(product);
+
+  if (!inScope) return aiText('scope');
+  if (/bonus|cashback|keshbek/i.test(query)) return aiText('noBonus');
+  if (/marketpleys|taqqos|solishtir|compare/i.test(query) && !product) return aiText('compare');
+
+  if (/sharh|komment|review|rating/i.test(query) && !product) {
+    const top = [...PRODUCTS].sort((left, right) => right.reviews - left.reviews)[0];
+    return `${aiText('reviews')} ${top.brand} ${tr(top.title)} — ${top.reviews.toLocaleString('ru-RU')} ${aiText('reviewsLabel')}.`;
+  }
+
+  if (/tejam|savings|эконом|save/i.test(query) && !product) {
+    const top = [...PRODUCTS].filter(item => item.offers?.length).sort((left, right) => savings(right).amount - savings(left).amount)[0];
+    return top ? assistantProductAdvice(top) : aiText('signIn');
+  }
+
+  return assistantProductAdvice(product);
+}
+
+/* Диалог с моделью.
+
+   Ключ OpenRouter лежит на сервере, поэтому запрос идёт через /api/ai/chat.
+   Если сервер недоступен или ключ не настроен — отвечаем локальным движком
+   выше: он считает по тем же данным каталога, только без свободной речи. */
+
+const aiState = { history: [], busy: false };
+
+function assistantTyping(on) {
+  const box = $('#ai-assistant-messages');
+  $('#ai-typing')?.remove();
+  if (on) {
+    box.insertAdjacentHTML('beforeend', '<div class="ai-typing" id="ai-typing"><span></span><span></span><span></span></div>');
+    box.scrollTop = box.scrollHeight;
+  }
+  $('#ai-assistant-status').textContent = on ? aiText('typing') : aiText('status');
+  $('.ai-assistant__send').toggleAttribute('disabled', on);
+}
+
+/* Карточка открытого товара: показывает, о чём именно идёт речь */
+function renderAssistantContext() {
+  const box = $('#ai-assistant-context');
+  const product = openProductId ? byId(openProductId) : null;
+  if (!product) {
+    box.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
+  box.hidden = false;
+  box.innerHTML = `
+    <img src="${product.image}" alt="">
+    <div class="ai-context__text">
+      <strong>${escapeHTML(`${product.brand} ${tr(product.title)}`)}</strong>
+      <span>${escapeHTML(aiText('contextHint'))}</span>
+    </div>`;
+}
+
+function renderAssistantPrompts() {
+  const list = openProductId ? aiText('productPrompts') : aiText('prompts');
+  $('#ai-assistant-prompts').innerHTML = list
+    .map(item => `<button type="button" data-ai-prompt="${escapeHTML(item.text)}">${escapeHTML(item.label)}</button>`)
+    .join('');
+}
+
+function openAssistant() {
+  const panel = $('#ai-assistant');
+  panel.classList.add('is-open');
+  panel.setAttribute('aria-hidden', 'false');
+  $('#ai-assistant-toggle').setAttribute('aria-expanded', 'true');
+  $('#ai-assistant-toggle').classList.remove('is-hinting');
+
+  renderAssistantContext();
+  renderAssistantPrompts();
+
+  if (!$('#ai-assistant-messages').children.length) {
+    assistantMessage(aiText('hello'));
+    // Карточка товара открыта — совет по нему нужен сразу, без вопроса
+    if (openProductId) assistantMessage(assistantProductAdvice(byId(openProductId)));
+  }
+  $('#ai-assistant-input').focus();
+}
+
+function closeAssistant() {
+  $('#ai-assistant').classList.remove('is-open');
+  $('#ai-assistant').setAttribute('aria-hidden', 'true');
+  $('#ai-assistant-toggle').setAttribute('aria-expanded', 'false');
+}
+
+function resetAssistant() {
+  aiState.history = [];
+  $('#ai-assistant-messages').innerHTML = '';
+  assistantMessage(aiText('hello'));
+  renderAssistantPrompts();
+}
+
+async function submitAssistant(question) {
+  const value = question.trim();
+  if (!value || aiState.busy) return;
+
+  assistantMessage(value, 'user');
+  aiState.busy = true;
+  assistantTyping(true);
+
+  let reply;
+  let note = '';
+  try {
+    const data = await api('/api/ai/chat', {
+      method: 'POST',
+      body: {
+        message: value.slice(0, 500),
+        lang: LANG,
+        product_id: openProductId,
+        history: aiState.history.slice(-8),
+      },
+    });
+    reply = data.reply;
+  } catch (err) {
+    console.warn('AI backend недоступен, отвечаем локально:', err.message);
+    reply = assistantReply(value);
+    note = err.status === 429 ? aiText('rateLimit') : aiText('offline');
+  }
+
+  assistantTyping(false);
+  aiState.busy = false;
+  assistantMessage(reply);
+  if (note) assistantMessage(note, 'error');
+
+  aiState.history.push({ role: 'user', content: value }, { role: 'assistant', content: reply });
+  aiState.history = aiState.history.slice(-10);
+}
+
+function renderAssistantUI() {
+  $('#ai-assistant-title').textContent = aiText('title');
+  $('#ai-assistant-status').textContent = aiText('status');
+  $('#ai-assistant-input').placeholder = aiText('placeholder');
+  $('#ai-fab-hint').textContent = aiText('hint');
+  renderAssistantPrompts();
+}
+
+/* Подсказка у кнопки — один раз за браузер: иначе она превращается в баннер */
+function primeAssistantHint() {
+  if (store.read('arzonol:ai-hinted', false)) return;
+  store.write('arzonol:ai-hinted', true);
+  setTimeout(() => {
+    const fab = $('#ai-assistant-toggle');
+    fab.classList.add('is-hinting');
+    setTimeout(() => fab.classList.remove('is-hinting'), 6000);
+  }, 2500);
+}
+
+/* --------------------------------------------------------------------------
    Смена языка / региона
    -------------------------------------------------------------------------- */
 
@@ -935,6 +1481,7 @@ function switchLang(lang) {
   setLang(lang);
 
   applyStaticI18n();
+  renderAuthUI();          // кнопки «Войти» / «Регистрация» тоже переводятся
   renderLangSwitch();
   renderRegionSelector();
   renderPlatformFilterChips();
@@ -944,7 +1491,10 @@ function switchLang(lang) {
   renderSections();
   renderPartners();
   renderCompareDrawer();
+  renderAssistantUI();
 
+  // Открытая модалка входа сохраняет режим, но меняет язык подписей
+  if (!$('#auth-modal').hidden) openAuthModal(authMode);
   if ($('#compare-modal').classList.contains('is-open')) renderCompareTable();
   if (openProductId) fillSheet(byId(openProductId));
   if (!$('#results').hidden) {
@@ -967,11 +1517,188 @@ function showFavorites() {
   renderResults(t('results.favorites'), items, t('empty.favorites'));
 }
 
+/* --------------------------------------------------------------------------
+   Личный кабинет: отслеживаемые товары с назначенными порогами цен
+   -------------------------------------------------------------------------- */
+
+async function showCabinet() {
+  if (!currentUser) { openAuthModal('login'); return; }
+
+  let tracked = [];
+  try {
+    ({ tracked } = await api('/api/tracked'));
+  } catch (err) {
+    toast(err.message);
+    return;
+  }
+
+  const rows = tracked.map(r => {
+    const p = byId(r.product_id);
+    if (!p) return null;
+    const current = bestOffer(p).price;
+    const target = r.target_price;
+    // Насколько цена ещё должна упасть, чтобы дойти до названной
+    const gap = target ? current - target : null;
+    return { p, current, target, gap, reached: target !== null && gap <= 0 };
+  }).filter(Boolean).sort((a, b) => (a.gap ?? Infinity) - (b.gap ?? Infinity));
+
+  const initial = (currentUser.name || currentUser.email)[0].toUpperCase();
+  const avatar = $('#cabinet-avatar');
+  if (avatar) avatar.textContent = initial;
+  $('#cabinet-name').textContent = currentUser.name || currentUser.email.split('@')[0];
+  $('#cabinet-email').textContent = currentUser.email;
+  $('#cabinet-count').textContent = String(rows.length);
+  $('#cabinet-reached').textContent = String(rows.filter(r => r.reached).length);
+
+  $('#cabinet-list').innerHTML = rows.length ? rows.map(r => `
+    <div class="cab-row${r.reached ? ' is-reached' : ''}">
+      <button class="cab-row__open" type="button" data-open="${r.p.id}">
+        <img src="${r.p.thumbs[0] || r.p.image}" alt="" loading="lazy">
+        <span class="cab-row__main">
+          <span class="cab-row__name">${r.p.brand} — ${tr(r.p.title)}</span>
+          <span class="cab-row__meta">${t('cabinet.now')} ${money(r.current)}</span>
+        </span>
+      </button>
+      <span class="cab-row__target">
+        ${r.target
+          ? `<span class="cab-row__goal">${t('cabinet.goal')} ${money(r.target)}</span>
+             <span class="cab-row__gap${r.reached ? ' is-ok' : ''}">${
+               r.reached ? t('cabinet.reached') : `${t('cabinet.left')} ${money(r.gap)}`}</span>`
+          : `<span class="cab-row__gap">${t('cabinet.noGoal')}</span>`}
+      </span>
+      <button class="cab-row__del" type="button" data-untrack="${r.p.id}" aria-label="${t('compare.remove')}">
+        <svg><use href="#i-trash"/></svg>
+      </button>
+    </div>`).join('') : `<p class="empty">${t('cabinet.empty')}</p>`;
+
+  // Админ-панель показывается только тому, у кого есть права
+  $('#cabinet-admin').hidden = !currentUser.isAdmin;
+
+  fillProfileForm();
+  loadActivity();
+
+  // Прячем все остальные блоки главной страницы
+  const hero = $('.hero');
+  if (hero) hero.hidden = true;
+  const controls = $('#controls-bar');
+  if (controls) controls.hidden = true;
+  $('#results').hidden = true;
+  $('#sections').hidden = true;
+  $('#cats').hidden = true;
+  const partners = $('.partners');
+  if (partners) partners.hidden = true;
+
+  $('#cabinet').hidden = false;
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+function switchCabTab(tab) {
+  $$('.cab-tab').forEach(b => b.classList.toggle('is-active', b.dataset.tab === tab));
+  ['tracked', 'activity', 'settings'].forEach(name => {
+    $(`#pane-${name}`).hidden = name !== tab;
+  });
+}
+
+function fillProfileForm() {
+  $('#prof-name').value = currentUser.name || '';
+  $('#prof-region').innerHTML = REGIONS.map(r =>
+    `<option value="${r.id}"${r.id === currentUser.region ? ' selected' : ''}>${tr(r.name)}</option>`).join('');
+  $('#profile-msg').hidden = true;
+  $('#password-msg').hidden = true;
+}
+
+async function loadActivity() {
+  let data;
+  try { data = await api('/api/profile/activity'); } catch { return; }
+
+  $('#cabinet-viewed').innerHTML = data.viewed.length
+    ? data.viewed.map(v => `
+        <button class="cab-mini" type="button" data-open="${v.id}">
+          <img src="${v.image}" alt="" loading="lazy">
+          <span class="cab-mini__text">
+            <span class="cab-mini__name">${v.brand} — ${v.title}</span>
+            <span class="cab-mini__date">${v.at.slice(0, 10)}</span>
+          </span>
+        </button>`).join('')
+    : `<p class="cab-msg">${t('cabinet.noActivity')}</p>`;
+
+  $('#cabinet-searches').innerHTML = data.searches.length
+    ? data.searches.map(sq => `
+        <button class="cab-query" type="button" data-requery="${sq.query}">
+          <span>${sq.query}</span><span class="cab-mini__date">${sq.at.slice(0, 10)}</span>
+        </button>`).join('')
+    : `<p class="cab-msg">${t('cabinet.noActivity')}</p>`;
+}
+
+async function saveProfile(e) {
+  e.preventDefault();
+  const msg = $('#profile-msg');
+  try {
+    const { user } = await api('/api/profile', {
+      method: 'PUT',
+      body: { name: $('#prof-name').value.trim(), region: $('#prof-region').value, lang: LANG },
+    });
+    currentUser = user;
+    state.region = user.region;
+    persist();
+    renderAuthUI();
+    renderRegionSelector();
+    $('#cabinet-name').textContent = user.name || user.email;
+    msg.textContent = t('cabinet.saved');
+    msg.className = 'cab-msg is-ok';
+  } catch (err) {
+    msg.textContent = err.message;
+    msg.className = 'cab-msg is-error';
+  }
+  msg.hidden = false;
+}
+
+async function changePassword(e) {
+  e.preventDefault();
+  const msg = $('#password-msg');
+  try {
+    await api('/api/profile/password', {
+      method: 'POST',
+      body: { current_password: $('#pw-current').value, new_password: $('#pw-new').value },
+    });
+    $('#password-form').reset();
+    msg.textContent = t('cabinet.passwordChanged');
+    msg.className = 'cab-msg is-ok';
+  } catch (err) {
+    msg.textContent = err.message;
+    msg.className = 'cab-msg is-error';
+  }
+  msg.hidden = false;
+}
+
+async function untrack(id) {
+  try {
+    await api(`/api/tracked/${id}`, { method: 'DELETE' });
+    state.favorites.delete(id);
+    persist();
+    syncBadges();
+    renderSections();
+    showCabinet();
+    checkNotifications();
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
 function goHome() {
   state.filter = null;
   state.query = '';
   clearSearchInputs();
   syncCatState();
+
+  const hero = $('.hero');
+  if (hero) hero.hidden = false;
+  const controls = $('#controls-bar');
+  if (controls) controls.hidden = false;
+  const partners = $('.partners');
+  if (partners) partners.hidden = false;
+  $('#cabinet').hidden = true;
+
   applyView();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1025,6 +1752,14 @@ function wireSearch({ form, input, clear, suggest }) {
     state.query = el.value.trim();
     box.hidden = true;
     applyView();
+
+    // Аналитика спроса пишется и для гостей — регистрация для неё не нужна
+    if (state.query) {
+      api('/api/analytics/search', {
+        method: 'POST',
+        body: { query: state.query, results: search(state.query).length, lang: LANG },
+      }).catch(() => { /* аналитика не должна ломать поиск */ });
+    }
   });
 }
 
@@ -1060,6 +1795,21 @@ function watchHeroSearch() {
 
 function wireEvents() {
   document.addEventListener('click', e => {
+    const assistantToggle = e.target.closest('#ai-assistant-toggle');
+    if (assistantToggle) {
+      $('#ai-assistant').classList.contains('is-open') ? closeAssistant() : openAssistant();
+      return;
+    }
+    if (e.target.closest('#ai-assistant-close')) { closeAssistant(); return; }
+    if (e.target.closest('#ai-assistant-reset')) { resetAssistant(); return; }
+
+    const assistantPrompt = e.target.closest('[data-ai-prompt]');
+    if (assistantPrompt) {
+      openAssistant();
+      submitAssistant(assistantPrompt.dataset.aiPrompt);
+      return;
+    }
+
     // Язык
     const lang = e.target.closest('[data-lang]');
     if (lang) { switchLang(lang.dataset.lang); return; }
@@ -1137,6 +1887,12 @@ function wireEvents() {
       return;
     }
 
+    // showCabinet сам откроет окно входа, если пользователь не авторизован
+    if (e.target.closest('[data-nav="account"]')) {
+      showCabinet();
+      return;
+    }
+
     const suggest = e.target.closest('[data-suggest]');
     if (suggest) {
       suggest.closest('.search__suggest').hidden = true;
@@ -1152,6 +1908,40 @@ function wireEvents() {
       openAlertModal(openProductId);
       return;
     }
+    if (e.target.closest('[data-close-notif]')) { $('#notifications').hidden = true; return; }
+
+    if (e.target.closest('#user-menu-btn')) { showCabinet(); return; }
+
+    const tab = e.target.closest('[data-tab]');
+    if (tab) { switchCabTab(tab.dataset.tab); return; }
+
+    const rq = e.target.closest('[data-requery]');
+    if (rq) {
+      syncSearchInputs(rq.dataset.requery);
+      state.query = rq.dataset.requery;
+      applyView();
+      return;
+    }
+
+    const un = e.target.closest('[data-untrack]');
+    if (un) { untrack(un.dataset.untrack); return; }
+
+    const authBtn = e.target.closest('[data-auth]');
+    if (authBtn) { openAuthModal(authBtn.dataset.auth); return; }
+
+    if (e.target.closest('#toggle-auth-pw')) {
+      const pwInput = $('#auth-password');
+      pwInput.type = pwInput.type === 'password' ? 'text' : 'password';
+      return;
+    }
+
+    if (e.target.closest('[data-close-auth]') || e.target.id === 'auth-modal') { closeAuthModal(); return; }
+    if (e.target.closest('#logout-btn') || e.target.closest('#cab-logout-btn')) {
+      logout();
+      goHome();
+      return;
+    }
+
     if (e.target.closest('[data-close-alert]') || e.target.id === 'alert-modal') {
       closeAlertModal();
       return;
@@ -1173,10 +1963,31 @@ function wireEvents() {
   });
 
   // Сабмит формы подписки на цену
-  $('#alert-form').addEventListener('submit', e => {
+  // Подписка на снижение цены: пишем цель в БД, а не показываем тост в пустоту
+  $('#alert-form').addEventListener('submit', async e => {
     e.preventDefault();
-    closeAlertModal();
-    toast(t('alert.success'));
+    const productId = $('#sheet-alert-btn').dataset.id;
+    const target = parseInt($('#alert-target-price').value, 10);
+
+    try {
+      await api('/api/tracked', {
+        method: 'POST',
+        body: {
+          product_id: productId,
+          target_price: Number.isFinite(target) ? target : null,
+          contact: $('#alert-contact').value.trim(),
+        },
+      });
+      state.favorites.add(productId);
+      persist();
+      syncBadges();
+      renderSections();
+      closeAlertModal();
+      toast(t('alert.success'));
+      checkNotifications();
+    } catch (err) {
+      toast(err.message);
+    }
   });
 
   $('#sheet-compare').addEventListener('click', e => {
@@ -1184,8 +1995,17 @@ function wireEvents() {
   });
 
   $('#sheet-fav').addEventListener('click', e => toggleFav(e.currentTarget.dataset.id));
+  $('#auth-form').addEventListener('submit', submitAuth);
+  $('#profile-form').addEventListener('submit', saveProfile);
+  $('#password-form').addEventListener('submit', changePassword);
   $('#open-compare-modal').addEventListener('click', openCompareModal);
   $('#clear-compare').addEventListener('click', clearCompare);
+  $('#ai-assistant-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = $('#ai-assistant-input');
+    submitAssistant(input.value);
+    input.value = '';
+  });
 
   SEARCH_FIELDS.forEach(wireSearch);
   watchHeroSearch();
@@ -1195,7 +2015,9 @@ function wireEvents() {
       // Открытость проверяем по hidden, а не по .is-open: класс навешивается
       // внутри requestAnimationFrame, и завязывать на него закрытие окна значит
       // ставить работоспособность в зависимость от кадра отрисовки.
-      if (!$('#alert-modal').hidden) closeAlertModal();
+      if ($('#ai-assistant').classList.contains('is-open')) closeAssistant();
+      else if (!$('#auth-modal').hidden) closeAuthModal();
+      else if (!$('#alert-modal').hidden) closeAlertModal();
       else if (!$('#compare-modal').hidden) closeCompareModal();
       else if (!$('#overlay').hidden) closeSheet();
       else if ($('#drawer').classList.contains('is-open')) closeCompareDrawer();
@@ -1225,23 +2047,54 @@ function wireEvents() {
    Старт
    -------------------------------------------------------------------------- */
 
-document.documentElement.lang = t('html.lang');
-applyTheme(state.theme);
-applyStaticI18n();
-renderLangSwitch();
-renderRegionSelector();
-renderPlatformFilterChips();
-renderNav();
-renderHero();
-renderCategories();
-renderSections();
-renderPartners();
-renderCompareDrawer();
-syncBadges();
-wireEvents();
+/* Полная перерисовка: используется при старте, смене языка и входе/выходе */
+function renderAll() {
+  applyStaticI18n();
+  renderAuthUI();
+  renderLangSwitch();
+  renderRegionSelector();
+  renderPlatformFilterChips();
+  renderNav();
+  renderHero();
+  renderCategories();
+  renderSections();
+  renderPartners();
+  renderCompareDrawer();
+  renderAssistantUI();
+  syncBadges();
+  $('#sort-select').value = state.sort;
 
-$('#sort-select').value = state.sort;
-
-if (!store.read('arzonol:cookies', store.read('bozor:cookies', null))) {
-  setTimeout(() => { $('#cookie').hidden = false; }, 900);
+  // Блок результатов скрыт, но не пуст: после выхода в нём остались бы цены,
+  // отрисованные для авторизованного. Обновляем, если открыт, иначе чистим.
+  const results = $('#results');
+  if (!results.hidden) applyView();
+  else $('#results-grid').innerHTML = '';
 }
+
+async function boot() {
+  document.documentElement.lang = t('html.lang');
+  applyTheme(state.theme);
+
+  try {
+    await restoreSession();
+    await loadCatalog();
+    await pullUserData();
+  } catch (err) {
+    // Без каталога показывать нечего — говорим прямо, а не оставляем пустой экран
+    $('#boot-error').hidden = false;
+    $('#boot-error-detail').textContent = String(err.message || err);
+    console.error('Не удалось загрузить каталог:', err);
+    return;
+  }
+
+  renderAll();
+  wireEvents();
+  checkNotifications();
+  primeAssistantHint();
+
+  if (!store.read('arzonol:cookies', null)) {
+    setTimeout(() => { $('#cookie').hidden = false; }, 900);
+  }
+}
+
+boot();
