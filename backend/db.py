@@ -46,10 +46,16 @@ CREATE TABLE IF NOT EXISTS categories (
 );
 
 CREATE TABLE IF NOT EXISTS platforms (
-    id       TEXT PRIMARY KEY,
-    name     TEXT NOT NULL,
-    color    TEXT NOT NULL,
-    site_url TEXT NOT NULL DEFAULT ''
+    id               TEXT PRIMARY KEY,
+    name             TEXT NOT NULL,
+    color            TEXT NOT NULL,
+    site_url         TEXT NOT NULL DEFAULT '',
+    api_key          TEXT NOT NULL DEFAULT '',
+    feed_url         TEXT NOT NULL DEFAULT '',
+    integration_type TEXT NOT NULL DEFAULT 'api',
+    sync_interval    INTEGER NOT NULL DEFAULT 60,
+    last_sync_at     TEXT,
+    status           TEXT NOT NULL DEFAULT 'active'
 );
 
 CREATE TABLE IF NOT EXISTS regions (
@@ -137,6 +143,16 @@ CREATE TABLE IF NOT EXISTS product_views (
     product_id TEXT    NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     created_at TEXT    NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS sync_logs (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    platform_id   TEXT NOT NULL REFERENCES platforms(id) ON DELETE CASCADE,
+    status        TEXT NOT NULL,
+    items_updated INTEGER NOT NULL DEFAULT 0,
+    message       TEXT NOT NULL DEFAULT '',
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_sync_logs_platform ON sync_logs(platform_id);
 """
 
 
@@ -151,6 +167,12 @@ def connect() -> sqlite3.Connection:
 # не создаст в уже существующей базе, поэтому догоняем через ALTER.
 MIGRATIONS = [
     ("users", "is_admin", "INTEGER NOT NULL DEFAULT 0"),
+    ("platforms", "api_key", "TEXT NOT NULL DEFAULT ''"),
+    ("platforms", "feed_url", "TEXT NOT NULL DEFAULT ''"),
+    ("platforms", "integration_type", "TEXT NOT NULL DEFAULT 'api'"),
+    ("platforms", "sync_interval", "INTEGER NOT NULL DEFAULT 60"),
+    ("platforms", "last_sync_at", "TEXT"),
+    ("platforms", "status", "TEXT NOT NULL DEFAULT 'active'"),
 ]
 
 

@@ -22,6 +22,29 @@ const MIME_TYPES = {
 
 const server = http.createServer((req, res) => {
   let reqPath = decodeURIComponent(req.url.split('?')[0]);
+
+  // Proxy API requests to FastAPI backend on port 8000
+  if (reqPath.startsWith('/api/')) {
+    const proxyReq = http.request({
+      hostname: '127.0.0.1',
+      port: 8000,
+      path: req.url,
+      method: req.method,
+      headers: { ...req.headers, host: '127.0.0.1:8000' },
+    }, (proxyRes) => {
+      res.writeHead(proxyRes.statusCode, proxyRes.headers);
+      proxyRes.pipe(res);
+    });
+    proxyReq.on('error', (err) => {
+      res.writeHead(502, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({
+        detail: 'FastAPI serveri (port 8000) ishlamayapti. Iltimos: cd backend && python -m uvicorn main:app --reload --port 8000 buyrug‘ini bajaring.'
+      }));
+    });
+    req.pipe(proxyReq);
+    return;
+  }
+
   if (reqPath === '/' || reqPath === '') reqPath = '/index.html';
 
   const filePath = path.join(ROOT, reqPath);

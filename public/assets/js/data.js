@@ -1,15 +1,15 @@
 /* ==========================================================================
-   Каталог: мебель, техника, стройматериалы
-   Bozor — агрегатор цен по торговым площадкам Узбекистана
-
-   Фото лежат локально в assets/img/products/ — <id>.jpg и <id>-1..3.jpg.
-   Все изображения локальные для автономной работы на демо.
+   ArzonOL — данные каталога и вычисления цен
+   Поддержка как автономного режима (статический хостинг, demo),
+   так и работы с backend API (FastAPI + SQLite).
    ========================================================================== */
 
-const img = (id, n) => `assets/img/products/${id}${n ? `-${n}` : ''}.jpg`;
+const API = '';
 
-/* Справочник площадок с реальными узбекскими маркетплейсами */
-const PLATFORMS = [
+const img = (id, n) => `/assets/img/products/${id}${n ? `-${n}` : ''}.jpg`;
+
+/* Справочник маркетплейсов Узбекистана */
+const DEFAULT_PLATFORMS = [
   { id: 'uzum',      name: 'Uzum Market', color: '#7000ff' },
   { id: 'olcha',     name: 'Olcha',       color: '#f04e23' },
   { id: 'texnomart', name: 'Texnomart',   color: '#e31e24' },
@@ -20,10 +20,8 @@ const PLATFORMS = [
   { id: 'zoodmall',  name: 'ZoodMall',    color: '#00b2a9' }
 ];
 
-const platformOf = id => PLATFORMS.find(p => p.id === id) || { id, name: id, color: '#787574' };
-
-/* Регионы и города Узбекистана для расчёта доставки */
-const REGIONS = [
+/* Регионы Узбекистана для расчёта срока доставки */
+const DEFAULT_REGIONS = [
   { id: 'tashkent',  name: { ru: 'Ташкент', uz: 'Toshkent', en: 'Tashkent' }, offset: 0 },
   { id: 'samarkand', name: { ru: 'Самарканд', uz: 'Samarqand', en: 'Samarkand' }, offset: 1 },
   { id: 'bukhara',   name: { ru: 'Бухара', uz: 'Buxoro', en: 'Bukhara' }, offset: 1 },
@@ -32,28 +30,33 @@ const REGIONS = [
   { id: 'andijan',   name: { ru: 'Андижан', uz: 'Andijon', en: 'Andijan' }, offset: 2 }
 ];
 
-const regionOf = id => REGIONS.find(r => r.id === id) || REGIONS[0];
-
-const CATEGORIES = [
-  { id: 'mebel',    icon: '#b0553f', glyph: 'bed',
-    label: { ru: 'Мебель',         uz: 'Mebel',                 en: 'Furniture' },
-    hint:  { ru: 'диваны, шкафы, столы',
-             uz: 'divanlar, shkaflar, stollar',
-             en: 'sofas, wardrobes, tables' } },
-  { id: 'qurilish', icon: '#7a9a6b', glyph: 'house',
+/* Категории каталога */
+const DEFAULT_CATEGORIES = [
+  {
+    id: 'mebel',
+    icon: '#b0553f',
+    glyph: 'bed',
+    label: { ru: 'Мебель', uz: 'Mebel', en: 'Furniture' },
+    hint:  { ru: 'диваны, шкафы, столы', uz: 'divanlar, shkaflar, stollar', en: 'sofas, wardrobes, tables' }
+  },
+  {
+    id: 'qurilish',
+    icon: '#7a9a6b',
+    glyph: 'house',
     label: { ru: 'Стройматериалы', uz: 'Qurilish materiallari', en: 'Building materials' },
-    hint:  { ru: 'отделка, крепёж, смеси',
-             uz: 'pardoz, mahkamlagich, aralashmalar',
-             en: 'finishing, fasteners, mixes' } },
-  { id: 'texnika',  icon: '#2f6fd0', glyph: 'monitor',
-    label: { ru: 'Техника',        uz: 'Texnika',               en: 'Appliances' },
-    hint:  { ru: 'кухня, климат, уборка',
-             uz: 'oshxona, iqlim, tozalash',
-             en: 'kitchen, climate, cleaning' } }
+    hint:  { ru: 'отделка, крепёж, смеси', uz: 'pardoz, mahkamlagich, aralashmalar', en: 'finishing, fasteners, mixes' }
+  },
+  {
+    id: 'texnika',
+    icon: '#2f6fd0',
+    glyph: 'monitor',
+    label: { ru: 'Техника', uz: 'Texnika', en: 'Appliances' },
+    hint:  { ru: 'кухня, климат, уборка', uz: 'oshxona, iqlim, tozalash', en: 'kitchen, climate, cleaning' }
+  }
 ];
 
-/* Каталог товаров с предложениями различных площадок */
-const PRODUCTS = [
+/* Полный каталог товаров */
+const DEFAULT_PRODUCTS = [
   /* ---------- Мебель ---------- */
   {
     id: 'f01', cat: 'mebel', brand: 'Milan Mebel', rating: 4.8, reviews: 412, sold: 118,
@@ -414,62 +417,136 @@ const PRODUCTS = [
   }
 ];
 
-/* Заполняем пути к картинкам */
-PRODUCTS.forEach(p => {
-  p.image = img(p.id);
-  p.thumbs = [img(p.id, 1), img(p.id, 2), img(p.id, 3)];
+/* Инициализируем пути к изображениям и предзаполненные данные */
+DEFAULT_PRODUCTS.forEach(p => {
+  p.image = p.image || img(p.id);
+  p.thumbs = p.thumbs || [img(p.id, 1), img(p.id, 2), img(p.id, 3)];
+  p.offersCount = p.offers ? p.offers.length : 0;
 });
 
-/* Лучшее предложение (минимальная цена среди тех, что в наличии) */
+/* Активные структуры данных */
+let PLATFORMS  = [...DEFAULT_PLATFORMS];
+let REGIONS    = [...DEFAULT_REGIONS];
+let CATEGORIES = [...DEFAULT_CATEGORIES];
+let PRODUCTS   = [...DEFAULT_PRODUCTS];
+let CATALOG_UNLOCKED = true; // в демо/автономном режиме цены всегда доступны
+
+const platformOf = id => PLATFORMS.find(p => p.id === id) || { id, name: id, color: '#787574' };
+const regionOf   = id => REGIONS.find(r => r.id === id) || REGIONS[0] || { id, name: { ru: id, uz: id, en: id }, offset: 0 };
+const byId = id => PRODUCTS.find(p => p.id === id);
+
+/* --------------------------------------------------------------------------
+   Сетевой уровень и аутентификация
+   -------------------------------------------------------------------------- */
+
+function authHeaders() {
+  const token = localStorage.getItem('arzonol:token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function api(path, { method = 'GET', body, auth = true } = {}) {
+  const res = await fetch(API + path, {
+    method,
+    headers: {
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      ...(auth ? authHeaders() : {}),
+    },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  });
+
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({}));
+    throw Object.assign(new Error(detail.detail || `HTTP ${res.status}`), { status: res.status });
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+/* Загрузка каталога с автоматическим переходом на локальный fallback при оффлайне */
+async function loadCatalog() {
+  try {
+    const [refs, prods] = await Promise.all([
+      api('/api/catalog'),
+      api('/api/products')
+    ]);
+    if (refs && refs.platforms) PLATFORMS = refs.platforms;
+    if (refs && refs.regions) REGIONS = refs.regions;
+    if (refs && refs.categories) CATEGORIES = refs.categories;
+    if (prods && prods.products && prods.products.length) {
+      PRODUCTS = prods.products.map(p => {
+        p.image = p.image.startsWith('/') ? p.image : '/' + p.image;
+        p.thumbs = (p.thumbs || []).map(t => t.startsWith('/') ? t : '/' + t);
+        return p;
+      });
+      CATALOG_UNLOCKED = prods.unlocked ?? true;
+    }
+  } catch (err) {
+    console.warn('Backend API не отвечает, переключаемся на встроенный локальный каталог:', err.message);
+    PLATFORMS = [...DEFAULT_PLATFORMS];
+    REGIONS = [...DEFAULT_REGIONS];
+    CATEGORIES = [...DEFAULT_CATEGORIES];
+    PRODUCTS = [...DEFAULT_PRODUCTS];
+    CATALOG_UNLOCKED = true;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Вычисления над предложениями
+   -------------------------------------------------------------------------- */
+
+const EMPTY_OFFER = { platform: 'uzum', price: 0, inStock: false, delivery: 0, url: '#' };
+
+function offerPool(product) {
+  if (!product || !product.offers || !product.offers.length) return null;
+  const inStock = product.offers.filter(o => o && o.inStock);
+  return inStock.length ? inStock : product.offers;
+}
+
+/* Лучшее предложение (минимальная цена) */
 function bestOffer(product) {
-  if (!product || !product.offers || !product.offers.length) {
-    return { platform: 'uzum', price: 0, inStock: false, delivery: 0, url: '#' };
-  }
-  const inStockOffers = product.offers.filter(o => o.inStock);
-  const pool = inStockOffers.length ? inStockOffers : product.offers;
-  return pool.reduce((min, cur) => cur.price < min.price ? cur : min, pool[0]);
+  const pool = offerPool(product);
+  if (!pool || !pool.length) return EMPTY_OFFER;
+  return pool.reduce((min, cur) => ((cur && cur.price < min.price) ? cur : min), pool[0]);
 }
 
-/* Худшее (самое дорогое) предложение среди тех, что в наличии */
+/* Худшее предложение (максимальная цена) */
 function worstOffer(product) {
-  if (!product || !product.offers || !product.offers.length) {
-    return { platform: 'uzum', price: 0, inStock: false, delivery: 0, url: '#' };
-  }
-  const inStockOffers = product.offers.filter(o => o.inStock);
-  const pool = inStockOffers.length ? inStockOffers : product.offers;
-  return pool.reduce((max, cur) => cur.price > max.price ? cur : max, pool[0]);
+  const pool = offerPool(product);
+  if (!pool || !pool.length) return EMPTY_OFFER;
+  return pool.reduce((max, cur) => ((cur && cur.price > max.price) ? cur : max), pool[0]);
 }
 
-/* Диапазон цен */
 function priceRange(product) {
-  const best = bestOffer(product);
-  const worst = worstOffer(product);
-  return { min: best.price, max: worst.price };
+  return { min: bestOffer(product).price, max: worstOffer(product).price };
 }
 
-/* Экономия */
 function savings(product) {
-  const range = priceRange(product);
-  const diff = Math.max(0, range.max - range.min);
-  const percent = range.max > 0 ? Math.round((diff / range.max) * 100) : 0;
-  return { amount: diff, percent };
+  const { min, max } = priceRange(product);
+  const diff = Math.max(0, max - min);
+  return { amount: diff, percent: max > 0 ? Math.round((diff / max) * 100) : 0 };
 }
 
-/* Число предложений в наличии */
 function inStockCount(product) {
-  if (!product || !product.offers) return 0;
-  return product.offers.filter(o => o.inStock).length;
+  return (product && product.offers) ? product.offers.filter(o => o && o.inStock).length : 0;
 }
 
-/* Расчёт срока доставки с учётом выбранного региона */
+function offersCount(product) {
+  return product ? (product.offersCount ?? (product.offers || []).length) : 0;
+}
+
 function calcDeliveryDays(offer, regionId) {
   const region = regionOf(regionId);
-  return offer.delivery + region.offset;
+  return (offer ? offer.delivery : 1) + (region ? region.offset : 0);
 }
 
-/* 6-месячная история цен для SVG-графика */
+/* --------------------------------------------------------------------------
+   История цен и аналитика
+   -------------------------------------------------------------------------- */
+
 function priceHistory(product) {
-  const best = bestOffer(product).price;
+  if (product && product.history && product.history.length) {
+    return product.history;
+  }
+  const best = bestOffer(product).price || 1000000;
   const months = ['2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02'];
   const factors = [1.14, 1.11, 1.09, 1.05, 1.02, 1.0];
   return months.map((m, i) => ({
@@ -478,36 +555,47 @@ function priceHistory(product) {
   }));
 }
 
-/* Анализ тренда цены */
 function priceTrend(product) {
   const history = priceHistory(product);
+  if (!history || history.length < 2) {
+    return { diff: 0, percent: 0, isDrop: false, isAllTimeLow: true };
+  }
+
   const start = history[0].price;
   const current = history[history.length - 1].price;
   const diff = start - current;
-  const percent = Math.round((diff / start) * 100);
+  const allPrices = history.map(h => h.price);
+  const minPrice = allPrices.length ? Math.min(...allPrices) : current;
+
   return {
     diff,
-    percent,
+    percent: start > 0 ? Math.round((diff / start) * 100) : 0,
     isDrop: diff > 0,
-    isAllTimeLow: current <= Math.min(...history.map(h => h.price))
+    isAllTimeLow: current <= minPrice,
   };
 }
 
-/* Калькулятор общей экономии комплекта товаров */
 function totalBundleSavings(productIds) {
-  const products = productIds.map(byId).filter(Boolean);
+  const products = (productIds || []).map(byId).filter(Boolean);
   if (!products.length) return { bestTotal: 0, worstTotal: 0, savedAmount: 0, savedPercent: 0 };
-  const bestTotal = products.reduce((sum, p) => sum + bestOffer(p).price, 0);
-  const worstTotal = products.reduce((sum, p) => sum + worstOffer(p).price, 0);
+
+  const bestTotal = products.reduce((s, p) => s + bestOffer(p).price, 0);
+  const worstTotal = products.reduce((s, p) => s + worstOffer(p).price, 0);
   const savedAmount = Math.max(0, worstTotal - bestTotal);
-  const savedPercent = worstTotal > 0 ? Math.round((savedAmount / worstTotal) * 100) : 0;
-  return { bestTotal, worstTotal, savedAmount, savedPercent };
+  return {
+    bestTotal,
+    worstTotal,
+    savedAmount,
+    savedPercent: worstTotal > 0 ? Math.round((savedAmount / worstTotal) * 100) : 0,
+  };
 }
 
-/* Секции главной */
+/* --------------------------------------------------------------------------
+   Конфигурация витрины и презентации
+   -------------------------------------------------------------------------- */
+
 const SECTIONS = ['mebel', 'qurilish', 'texnika'];
 
-/* Лента над вордмарком */
 const CONSTELLATION = [
   { id: 'f01', kind: 'bare', w: 132 },
   { id: 't04', kind: 'card', w: 156 },
@@ -523,18 +611,20 @@ const CONSTELLATION = [
   { id: 'q08', kind: 'card', w: 152 }
 ];
 
-/* Партнёры и маркетплейсы */
 const PARTNERS = [
-  { name: 'Uzum Market',  color: '#7000ff' },
-  { name: 'Olcha',        color: '#f04e23' },
-  { name: 'Texnomart',    color: '#e31e24' },
-  { name: 'Mediapark',    color: '#0066b3' },
-  { name: 'Asaxiy',       color: '#1a7f4e' },
-  { name: 'Idea',         color: '#ff6b00' },
-  { name: 'Elmakon',      color: '#004b93' },
-  { name: 'ZoodMall',     color: '#00b2a9' },
-  { name: 'Milan Mebel',  color: '#b0553f' },
-  { name: 'Artel',        color: '#d95f4c' },
-  { name: 'Grohe',        color: '#0066b3' },
-  { name: 'Knauf',        color: '#2f6fd0' }
+  { id: 'uzum',      name: 'Uzum Market', type: 'Маркетплейс', color: '#7000ff', bg: 'linear-gradient(135deg, #7000ff, #9333ea)', icon: '🛒' },
+  { id: 'olcha',     name: 'Olcha.uz',    type: 'Маркетплейс', color: '#f04e23', bg: 'linear-gradient(135deg, #f04e23, #ea580c)', icon: '🍒' },
+  { id: 'texnomart', name: 'Texnomart',   type: 'Электроника', color: '#e31e24', bg: 'linear-gradient(135deg, #e31e24, #dc2626)', icon: '⚡' },
+  { id: 'mediapark', name: 'Mediapark',   type: 'Техника',     color: '#0066b3', bg: 'linear-gradient(135deg, #0066b3, #0284c7)', icon: '📱' },
+  { id: 'asaxiy',    name: 'Asaxiy',      type: 'Маркетплейс', color: '#1a7f4e', bg: 'linear-gradient(135deg, #1a7f4e, #16a34a)', icon: '📦' },
+  { id: 'idea',      name: 'Idea',        type: 'Магазин',     color: '#ff6b00', bg: 'linear-gradient(135deg, #ff6b00, #f97316)', icon: '💡' },
+  { id: 'elmakon',   name: 'Elmakon',     type: 'Электроника', color: '#004b93', bg: 'linear-gradient(135deg, #004b93, #2563eb)', icon: '🔌' },
+  { id: 'zoodmall',  name: 'ZoodMall',    type: 'Маркетплейс', color: '#00b2a9', bg: 'linear-gradient(135deg, #00b2a9, #0d9488)', icon: '🛍️' },
+  { id: 'milan',     name: 'Milan Mebel', type: 'Мебель',      color: '#b0553f', bg: 'linear-gradient(135deg, #b0553f, #c2410c)', icon: '🛋️' },
+  { id: 'artel',     name: 'Artel',       type: 'Бытовая техника', color: '#d95f4c', bg: 'linear-gradient(135deg, #d95f4c, #ef4444)', icon: '❄️' },
+  { id: 'grohe',     name: 'Grohe',       type: 'Сантехника',  color: '#0066b3', bg: 'linear-gradient(135deg, #0066b3, #0369a1)', icon: '🚿' },
+  { id: 'knauf',     name: 'Knauf',       type: 'Стройматериалы', color: '#2f6fd0', bg: 'linear-gradient(135deg, #2f6fd0, #3b82f6)', icon: '🧱' },
+  { id: 'apple',     name: 'Apple',       type: 'Оригинал',    color: '#111827', bg: 'linear-gradient(135deg, #4b5563, #111827)', icon: '🍎' },
+  { id: 'samsung',   name: 'Samsung',     type: 'Официальный', color: '#1428a0', bg: 'linear-gradient(135deg, #1428a0, #1d4ed8)', icon: '✨' },
+  { id: 'bosch',     name: 'Bosch',       type: 'Инструменты', color: '#e21a22', bg: 'linear-gradient(135deg, #e21a22, #b91c1c)', icon: '🔧' }
 ];

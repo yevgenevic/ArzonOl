@@ -3,7 +3,7 @@
    Основная логика витрины, сравнения, истории цен, фильтрации и тем
    ========================================================================== */
 
-const $  = (sel, root = document) => root.querySelector(sel);
+const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 // byId объявлен в data.js — здесь только категории
@@ -13,9 +13,8 @@ const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
 
 const starsHTML = rating => {
   const full = Math.round(rating);
-  return `<span class="stars" aria-hidden="true">${
-    [1, 2, 3, 4, 5].map(n => `<svg class="${n <= full ? '' : 'is-empty'}"><use href="#i-star"/></svg>`).join('')
-  }</span>`;
+  return `<span class="stars" aria-hidden="true">${[1, 2, 3, 4, 5].map(n => `<svg class="${n <= full ? '' : 'is-empty'}"><use href="#i-star"/></svg>`).join('')
+    }</span>`;
 };
 
 const num = n => n.toLocaleString('ru-RU');
@@ -134,9 +133,9 @@ function renderNotifications(list) {
     </div>
     <div class="notif__list">
       ${list.map(n => {
-        const p = byId(n.product_id);
-        if (!p) return '';
-        return `
+    const p = byId(n.product_id);
+    if (!p) return '';
+    return `
           <button class="notif__item" type="button" data-open="${p.id}">
             <img src="${p.thumbs[0] || p.image}" alt="" loading="lazy">
             <span class="notif__text">
@@ -145,7 +144,7 @@ function renderNotifications(list) {
                 <s>${money(n.target)}</s></span>
             </span>
           </button>`;
-      }).join('')}
+  }).join('')}
     </div>`;
 }
 
@@ -256,7 +255,7 @@ function cardHTML(p, rank) {
    -------------------------------------------------------------------------- */
 
 function renderHero() {
-  const set   = CONSTELLATION.map((item, i) => orbitHTML(item, i, false)).join('');
+  const set = CONSTELLATION.map((item, i) => orbitHTML(item, i, false)).join('');
   const clone = CONSTELLATION.map((item, i) => orbitHTML(item, i, true)).join('');
   $('#constellation').innerHTML = set + clone;
 }
@@ -301,11 +300,15 @@ function renderNav() {
 
   $('#topnav-cats').innerHTML = links({ home: t('nav.home'), cls: 'topnav__link' });
 
-  // Мобильный бар навигации
+  // Мобильный бар навигации (5 табов)
   $('#rail').innerHTML = `
     <button class="rail__link${!state.filter && !state.query ? ' is-active' : ''}" type="button" data-nav="home">
       ${icon('house')}
       <span>${t('nav.home')}</span>
+    </button>
+    <button class="rail__link${state.filter ? ' is-active' : ''}" type="button" data-open-catalog>
+      ${icon('grid')}
+      <span>${t('nav.catalog')}</span>
     </button>
     <button class="rail__link" type="button" data-nav="favorites">
       ${icon('heart')}
@@ -322,6 +325,43 @@ function renderNav() {
       <span>${t('nav.account')}</span>
     </button>
   `;
+}
+
+function renderCatalogDrawer() {
+  const el = $('#catalog-drawer-list');
+  if (!el) return;
+  el.innerHTML = CATEGORIES.map(c => {
+    const count = PRODUCTS.filter(p => p.cat === c.id).length;
+    const isAct = state.filter === c.id;
+    return `
+      <button class="catalog-drawer__item${isAct ? ' is-active' : ''}" type="button" data-cat="${c.id}" style="--cat:${c.icon}">
+        <span class="catalog-drawer__item-icon">${icon(c.glyph)}</span>
+        <div class="catalog-drawer__item-info">
+          <span class="catalog-drawer__item-name">${tr(c.label)}</span>
+          <span class="catalog-drawer__item-meta">${count} ${plural(count)} · ${tr(c.hint)}</span>
+        </div>
+        <svg class="catalog-drawer__item-arrow"><use href="#i-chevron-right"/></svg>
+      </button>`;
+  }).join('');
+}
+
+function openCatalogModal() {
+  renderCatalogDrawer();
+  const modal = $('#catalog-modal');
+  if (!modal) return;
+  modal.hidden = false;
+  requestAnimationFrame(() => modal.classList.add('is-open'));
+  document.body.classList.add('no-scroll');
+}
+
+function closeCatalogModal() {
+  const modal = $('#catalog-modal');
+  if (!modal) return;
+  modal.classList.remove('is-open');
+  setTimeout(() => {
+    modal.hidden = true;
+    document.body.classList.remove('no-scroll');
+  }, 240);
 }
 
 function renderCategories() {
@@ -351,6 +391,7 @@ const syncCatState = () => {
     b.setAttribute('aria-pressed', String(active));
   });
   $$('[data-nav="home"]').forEach(b => b.classList.toggle('is-active', !state.filter && !state.query));
+  $$('[data-open-catalog]').forEach(b => b.classList.toggle('is-active', Boolean(state.filter)));
 };
 
 const sectionHead = (title, count, sub) => `
@@ -411,8 +452,8 @@ function renderPartners() {
 
 function initScroller(scroller) {
   const track = $('.scroller__track', scroller);
-  const prev  = $('[data-scroll="-1"]', scroller);
-  const next  = $('[data-scroll="1"]', scroller);
+  const prev = $('[data-scroll="-1"]', scroller);
+  const next = $('[data-scroll="1"]', scroller);
   if (!track || !prev || !next) return;
 
   const sync = () => {
@@ -463,19 +504,142 @@ function sortAndFilterItems(items) {
   return list;
 }
 
+/* --------------------------------------------------------------------------
+   Ko'p tilli aqlli qidiruv tizimi (Multilingual Smart Search Engine)
+   Qo'llab-quvvatlaydi: O'zbekcha (Lotin va Kirill), Ruscha, Inglizcha + Sinonimlar
+   -------------------------------------------------------------------------- */
+
+const SEARCH_SYNONYMS = {
+  smartphones: [
+    'смартфон', 'смартфоны', 'телефон', 'телефоны', 'сотка', 'мобильник',
+    'smartfon', 'smartfonlar', 'telefon', 'telefonlar', 'sotka', 'mobil',
+    'smartphone', 'smartphones', 'phone', 'phones', 'mobile', 'cellphone'
+  ],
+  laptops: [
+    'ноутбук', 'ноутбуки', 'ноут', 'компьютер', 'компьютеры', 'комп', 'лэптоп',
+    'noutbuk', 'noutbuklar', 'nout', 'kompyuter', 'kompyuterlar', 'komp', 'leptop',
+    'laptop', 'laptops', 'notebook', 'notebooks', 'computer', 'pc', 'macbook', 'макбук'
+  ],
+  audio: [
+    'наушники', 'наушник', 'гарнитура', 'уши', 'вкладыши', 'беспроводные наушники',
+    'quloqchin', 'quloqchinlar', 'naushnik', 'naushniklar', 'garnitura', 'simsiz quloqchin',
+    'headphones', 'headphone', 'earphones', 'earbuds', 'headset', 'airpods', 'аирподс', 'эйрподс', 'buds'
+  ],
+  tablets: [
+    'планшет', 'планшеты', 'таблет', 'айпад',
+    'planshet', 'planshetlar', 'tab',
+    'tablet', 'tablets', 'ipad'
+  ],
+  apple: ['apple', 'эппл', 'эпл', 'яблоко', 'айфон', 'iphone', 'айпад', 'ipad', 'макбук', 'macbook', 'airpods', 'аирподс', 'эйрподс'],
+  samsung: ['samsung', 'самсунг', 'galaxy', 'галакси'],
+  xiaomi: ['xiaomi', 'redmi', 'сяоми', 'ксиаоми', 'редми', 'poco', 'поко'],
+  sony: ['sony', 'сони'],
+  huawei: ['huawei', 'хуавей', 'honor', 'хонор'],
+  asus: ['asus', 'асус'],
+  lenovo: ['lenovo', 'леново', 'thinkpad'],
+  acer: ['acer', 'асер', 'эйсер'],
+  jbl: ['jbl', 'жбл', 'джбл']
+};
+
+const CYR_TO_LAT = {
+  'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo', 'ж': 'j',
+  'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o',
+  'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'x', 'ц': 'ts',
+  'ч': 'ch', 'ш': 'sh', 'щ': 'sh', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu',
+  'я': 'ya', 'ў': "o'", 'ғ': "g'", 'қ': 'q', 'ҳ': 'h'
+};
+
+const LAT_TO_CYR = {
+  'sh': 'ш', 'ch': 'ч', 'yo': 'ё', 'yu': 'ю', 'ya': 'я', 'ts': 'ц',
+  "o'": 'ў', "g'": 'ғ', "o‘": 'ў', "g‘": 'ғ', "o`": 'ў', "g`": 'ғ',
+  'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д', 'e': 'е', 'j': 'ж',
+  'z': 'з', 'i': 'и', 'y': 'й', 'k': 'к', 'l': 'л', 'm': 'м', 'n': 'н',
+  'o': 'о', 'p': 'п', 'r': 'р', 's': 'с', 't': 'т', 'u': 'у', 'f': 'ф',
+  'x': 'х', 'q': 'қ', 'h': 'ҳ', 'w': 'в', 'c': 'к'
+};
+
+function normalizeSearchText(text) {
+  if (!text) return '';
+  return String(text)
+    .toLowerCase()
+    .replace(/[‘`ʼ’]/g, "'")
+    .replace(/[^a-zа-яёўғқҳ0-9\s']/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function transliterateCyrToLat(str) {
+  return str.split('').map(c => CYR_TO_LAT[c] !== undefined ? CYR_TO_LAT[c] : c).join('');
+}
+
+function transliterateLatToCyr(str) {
+  let res = str;
+  ['sh', 'ch', 'yo', 'yu', 'ya', 'ts', "o'", "g'", "o‘", "g‘"].forEach(k => {
+    if (LAT_TO_CYR[k]) res = res.replaceAll(k, LAT_TO_CYR[k]);
+  });
+  return res.split('').map(c => LAT_TO_CYR[c] !== undefined ? LAT_TO_CYR[c] : c).join('');
+}
+
+function buildProductSearchCorpus(p) {
+  const cat = catOf(p.cat);
+  const catLabels = cat ? `${cat.label?.ru || ''} ${cat.label?.uz || ''} ${cat.label?.en || ''}` : '';
+  const catSynonyms = (SEARCH_SYNONYMS[p.cat] || []).join(' ');
+  const brandLower = (p.brand || '').toLowerCase();
+  const brandSynonyms = (SEARCH_SYNONYMS[brandLower] || []).join(' ');
+
+  const titles = `${p.title?.ru || ''} ${p.title?.uz || ''} ${p.title?.en || ''}`;
+  const raw = `${p.brand || ''} ${titles} ${p.cat || ''} ${catLabels} ${catSynonyms} ${brandSynonyms}`;
+
+  const norm = normalizeSearchText(raw);
+  const lat = transliterateCyrToLat(norm);
+  const cyr = transliterateLatToCyr(norm);
+
+  return `${norm} ${lat} ${cyr}`;
+}
+
 function match(p, q) {
-  const hay = `${p.brand} ${p.title.ru} ${p.title.uz} ${p.title.en} ${p.cat}`.toLowerCase();
-  return q.split(/\s+/).filter(Boolean).every(term => hay.includes(term));
+  const normQuery = normalizeSearchText(q);
+  if (!normQuery) return true;
+
+  if (!p._searchCorpus) {
+    p._searchCorpus = buildProductSearchCorpus(p);
+  }
+
+  const terms = normQuery.split(/\s+/).filter(Boolean);
+
+  return terms.every(term => {
+    const termLat = transliterateCyrToLat(term);
+    const termCyr = transliterateLatToCyr(term);
+    return p._searchCorpus.includes(term) ||
+           p._searchCorpus.includes(termLat) ||
+           p._searchCorpus.includes(termCyr);
+  });
+}
+
+function searchScore(p, needle) {
+  let score = 0;
+  const currentTitle = (tr(p.title) || '').toLowerCase();
+  const brand = (p.brand || '').toLowerCase();
+  const normNeedle = normalizeSearchText(needle);
+
+  if (currentTitle.includes(normNeedle)) score += 100;
+  if (brand.includes(normNeedle)) score += 80;
+  if (p.cat && normNeedle.includes(p.cat)) score += 50;
+  if (p._searchCorpus && p._searchCorpus.includes(normNeedle)) score += 30;
+
+  return score;
 }
 
 function search(q) {
-  const needle = q.trim().toLowerCase();
+  const needle = q.trim();
   if (!needle) return [];
-  return PRODUCTS.filter(p => match(p, needle));
+  const matched = PRODUCTS.filter(p => match(p, needle));
+  matched.sort((a, b) => searchScore(b, needle) - searchScore(a, needle));
+  return matched;
 }
 
 function applyView() {
-  const results  = $('#results');
+  const results = $('#results');
   const sections = $('#sections');
 
   if (!state.query && !state.filter) {
@@ -548,7 +712,7 @@ function toggleFav(id) {
   // Сервер — источник правды; локальное состояние обновляем сразу, чтобы
   // интерфейс не ждал сеть
   (on ? api(`/api/tracked/${id}`, { method: 'DELETE' })
-      : api('/api/tracked', { method: 'POST', body: { product_id: id } })
+    : api('/api/tracked', { method: 'POST', body: { product_id: id } })
   ).catch(err => console.error('Не удалось сохранить отслеживание:', err));
 
   $$(`[data-fav="${id}"]`).forEach(btn => {
@@ -594,6 +758,12 @@ function toggleCompare(id) {
 function clearCompare() {
   state.compare.clear();
   persist();
+
+  if (currentUser) {
+    api('/api/compare', { method: 'PUT', body: [] })
+      .catch(err => console.error('Не удалось очистить сравнение:', err));
+  }
+
   renderCompareDrawer();
   syncBadges();
   if (openProductId) updateSheetCompareBtn(openProductId);
@@ -617,11 +787,11 @@ function renderCompareDrawer() {
 
   list.innerHTML = ids.length
     ? ids.map(id => {
-        const p = byId(id);
-        const best = bestOffer(p);
-        const sav = savings(p);
-        const savText = sav.amount > 0 ? ` · ${formatSavings(sav.amount, sav.percent)}` : '';
-        return `
+      const p = byId(id);
+      const best = bestOffer(p);
+      const sav = savings(p);
+      const savText = sav.amount > 0 ? ` · ${formatSavings(sav.amount, sav.percent)}` : '';
+      return `
           <div class="compare-item" data-id="${id}">
             <img src="${p.thumbs[0]}" alt="" loading="lazy">
             <div class="compare-item__meta">
@@ -633,7 +803,7 @@ function renderCompareDrawer() {
               <svg><use href="#i-trash"/></svg>
             </button>
           </div>`;
-      }).join('')
+    }).join('')
     : `<p class="empty">${t('compare.empty')}</p>`;
 
   // Калькулятор общей выгоды комплекта
@@ -740,7 +910,7 @@ function closeDialog() {
 function syncDialogState() {
   // .map($) передал бы индекс во второй параметр $ (root) — отсюда обёртка
   const open = ['#auth-modal', '#alert-modal', '#compare-modal', '#bundle-modal', '#overlay'].map(sel => $(sel)).find(el => el && !el.hidden)
-            || ($('#drawer').classList.contains('is-open') ? $('#drawer') : null);
+    || ($('#drawer').classList.contains('is-open') ? $('#drawer') : null);
   if (!open && activeDialog) closeDialog();
   else if (open) activeDialog = open;
 }
@@ -815,23 +985,23 @@ function fillSheet(p) {
           <div class="offer-row__action"><span class="skeleton-bar" style="width:72px;height:30px"></span></div>
         </div>`).join('')
     : sortedOffers.map(o => {
-    const plat = platformOf(o.platform);
-    const isBest = o.inStock && o.platform === bestOfferItem.platform && o.price === bestOfferItem.price;
-    const rowClass = `offer-row ${isBest ? 'offer-row--best' : ''} ${!o.inStock ? 'offer-row--out' : ''}`;
-    const bestBadge = isBest ? `<span class="offer-row__best-badge">${t('sheet.bestPrice')}</span>` : '';
-    const stockStatus = o.inStock
-      ? `<span class="offer-row__stock">${t('sheet.inStock')}</span>`
-      : `<span class="offer-row__stock is-out">${t('sheet.outOfStock')}</span>`;
-    
-    // Пересчёт срока доставки для выбранного региона
-    const deliveryDays = calcDeliveryDays(o, state.region);
-    const delivery = `<span class="offer-row__delivery">${t('sheet.delivery')} ${formatDelivery(deliveryDays)}</span>`;
+      const plat = platformOf(o.platform);
+      const isBest = o.inStock && o.platform === bestOfferItem.platform && o.price === bestOfferItem.price;
+      const rowClass = `offer-row ${isBest ? 'offer-row--best' : ''} ${!o.inStock ? 'offer-row--out' : ''}`;
+      const bestBadge = isBest ? `<span class="offer-row__best-badge">${t('sheet.bestPrice')}</span>` : '';
+      const stockStatus = o.inStock
+        ? `<span class="offer-row__stock">${t('sheet.inStock')}</span>`
+        : `<span class="offer-row__stock is-out">${t('sheet.outOfStock')}</span>`;
 
-    const action = o.inStock
-      ? `<a class="offer-row__btn" href="${o.url}" target="_blank" rel="noopener noreferrer">${t('sheet.visit')}<svg><use href="#i-external"/></svg></a>`
-      : `<button class="offer-row__btn is-disabled" type="button" disabled>${t('sheet.visit')}</button>`;
+      // Пересчёт срока доставки для выбранного региона
+      const deliveryDays = calcDeliveryDays(o, state.region);
+      const delivery = `<span class="offer-row__delivery">${t('sheet.delivery')} ${formatDelivery(deliveryDays)}</span>`;
 
-    return `
+      const action = o.inStock
+        ? `<a class="offer-row__btn" href="${o.url}" target="_blank" rel="noopener noreferrer">${t('sheet.visit')}<svg><use href="#i-external"/></svg></a>`
+        : `<button class="offer-row__btn is-disabled" type="button" disabled>${t('sheet.visit')}</button>`;
+
+      return `
       <div class="${rowClass}">
         <div class="offer-row__platform">
           <span class="offer-row__dot" style="background:${plat.color}"></span>
@@ -845,7 +1015,7 @@ function fillSheet(p) {
         <div class="offer-row__price">${money(o.price)}</div>
         <div class="offer-row__action">${action}</div>
       </div>`;
-  }).join('');
+    }).join('');
 
   // Кнопка сравнения
   const compareBtn = $('#sheet-compare');
@@ -861,9 +1031,47 @@ function fillSheet(p) {
   fav.dataset.id = p.id;
   fav.classList.toggle('is-on', state.favorites.has(p.id));
 
-  // Загрузка ИИ-советника по цене и ИИ-выжимки отзывов
-  loadAiPriceAdvisor(p.id);
-  loadAiReviewsSummary(p.id);
+  // ИИ-разбор сворачиваем при каждом открытии и грузим только по клику:
+  // раньше две модели дёргались на каждую карточку и лимит запросов
+  // заканчивался после десятка просмотров.
+  collapseSheetAi();
+}
+
+/* Сворачивает ИИ-панель карточки и очищает содержимое от прошлого товара */
+function collapseSheetAi() {
+  const panel = $('#sheet-ai-panel');
+  const toggle = $('#sheet-ai-toggle');
+  if (!panel || !toggle) return;
+  panel.hidden = true;
+  toggle.setAttribute('aria-expanded', 'false');
+  toggle.classList.remove('is-open');
+  $('#sheet-ai-advisor').innerHTML = '';
+  $('#sheet-ai-advisor').hidden = true;
+  $('#sheet-ai-reviews').innerHTML = '';
+  $('#sheet-ai-reviews').hidden = true;
+}
+
+async function toggleSheetAi() {
+  const panel = $('#sheet-ai-panel');
+  const toggle = $('#sheet-ai-toggle');
+  if (!panel || !openProductId) return;
+
+  if (!panel.hidden) {
+    collapseSheetAi();
+    return;
+  }
+
+  panel.hidden = false;
+  toggle.setAttribute('aria-expanded', 'true');
+  toggle.classList.add('is-open');
+  await Promise.all([
+    loadAiPriceAdvisor(openProductId),
+    loadAiReviewsSummary(openProductId),
+  ]);
+
+  // На невысоких экранах разбор не помещается целиком — подводим его к глазам,
+  // чтобы не пришлось искать прокруткой то, что только что раскрыли
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function renderPriceChart(p) {
@@ -1130,24 +1338,24 @@ function renderCompareTable() {
           <tr>
             <td>${t('compare.param.bestPrice')}</td>
             ${products.map(p => {
-              const best = bestOffer(p);
-              const plat = platformOf(best.platform);
-              return `<td class="matrix-col"><span class="matrix-val-price">${money(best.price)}</span><br><small style="color:var(--color-muted-gray)">${plat.name}</small></td>`;
-            }).join('')}
+    const best = bestOffer(p);
+    const plat = platformOf(best.platform);
+    return `<td class="matrix-col"><span class="matrix-val-price">${money(best.price)}</span><br><small style="color:var(--color-muted-gray)">${plat.name}</small></td>`;
+  }).join('')}
           </tr>
           <tr>
             <td>${t('compare.param.range')}</td>
             ${products.map(p => {
-              const range = priceRange(p);
-              return `<td class="matrix-col"><span class="matrix-val-text">${money(range.min)} – ${money(range.max)}</span></td>`;
-            }).join('')}
+    const range = priceRange(p);
+    return `<td class="matrix-col"><span class="matrix-val-text">${money(range.min)} – ${money(range.max)}</span></td>`;
+  }).join('')}
           </tr>
           <tr>
             <td>${t('compare.param.savings')}</td>
             ${products.map(p => {
-              const sav = savings(p);
-              return `<td class="matrix-col"><span class="matrix-val-savings">${formatSavings(sav.amount, sav.percent)}</span></td>`;
-            }).join('')}
+    const sav = savings(p);
+    return `<td class="matrix-col"><span class="matrix-val-savings">${formatSavings(sav.amount, sav.percent)}</span></td>`;
+  }).join('')}
           </tr>
           <tr>
             <td>${t('compare.param.platforms')}</td>
@@ -1156,9 +1364,9 @@ function renderCompareTable() {
           <tr>
             <td>${t('compare.param.inStock')}</td>
             ${products.map(p => {
-              const stock = inStockCount(p);
-              return `<td class="matrix-col"><span class="matrix-val-text">${stock} / ${p.offers.length}</span></td>`;
-            }).join('')}
+    const stock = inStockCount(p);
+    return `<td class="matrix-col"><span class="matrix-val-text">${stock} / ${p.offers.length}</span></td>`;
+  }).join('')}
           </tr>
           <tr>
             <td>${t('compare.param.rating')}</td>
@@ -1570,10 +1778,9 @@ async function showCabinet() {
       </button>
       <span class="cab-row__target">
         ${r.target
-          ? `<span class="cab-row__goal">${t('cabinet.goal')} ${money(r.target)}</span>
-             <span class="cab-row__gap${r.reached ? ' is-ok' : ''}">${
-               r.reached ? t('cabinet.reached') : `${t('cabinet.left')} ${money(r.gap)}`}</span>`
-          : `<span class="cab-row__gap">${t('cabinet.noGoal')}</span>`}
+      ? `<span class="cab-row__goal">${t('cabinet.goal')} ${money(r.target)}</span>
+             <span class="cab-row__gap${r.reached ? ' is-ok' : ''}">${r.reached ? t('cabinet.reached') : `${t('cabinet.left')} ${money(r.gap)}`}</span>`
+      : `<span class="cab-row__gap">${t('cabinet.noGoal')}</span>`}
       </span>
       <button class="cab-row__del" type="button" data-untrack="${r.p.id}" aria-label="${t('compare.remove')}">
         <svg><use href="#i-trash"/></svg>
@@ -1717,7 +1924,7 @@ function goHome() {
    -------------------------------------------------------------------------- */
 
 const SEARCH_FIELDS = [
-  { form: '#search-form',     input: '#q',     clear: '#search-clear',     suggest: '#suggest' },
+  { form: '#search-form', input: '#q', clear: '#search-clear', suggest: '#suggest' },
   { form: '#search-form-top', input: '#q-top', clear: '#search-clear-top', suggest: '#suggest-top' }
 ];
 
@@ -1774,8 +1981,8 @@ function wireSearch({ form, input, clear, suggest }) {
 
 function watchHeroSearch() {
   const hero = $('.hero .search');
-  const top  = $('#topnav-search');
-  const nav  = $('.topnav');
+  const top = $('#topnav-search');
+  const nav = $('.topnav');
   if (!hero || !top) return;
 
   let ticking = false;
@@ -1785,6 +1992,7 @@ function watchHeroSearch() {
     const navHeight = nav ? nav.offsetHeight : 60;
     const covered = hero.getBoundingClientRect().bottom < navHeight;
     top.classList.toggle('is-visible', covered);
+    if (nav) nav.classList.toggle('has-search-visible', covered);
   };
 
   const onScroll = () => {
@@ -1807,7 +2015,7 @@ const aiCache = new Map();
 async function loadAiPriceAdvisor(productId) {
   const container = $('#sheet-ai-advisor');
   if (!container) return;
-  
+
   if (!CATALOG_UNLOCKED) {
     container.hidden = true;
     return;
@@ -1863,7 +2071,7 @@ async function loadAiPriceAdvisor(productId) {
     ${data.target_price ? `
       <button class="ai-advisor__action" type="button" data-alert-target="${data.target_price}">
         <svg><use href="#i-bell"/></svg>
-        ${t('ai.setTargetPrice')}: ${money(data.target_price)}
+        ${t('ai.setTargetPrice')}: ${money(Number(data.target_price))}
       </button>` : ''}
   `;
 }
@@ -1896,7 +2104,7 @@ async function loadAiReviewsSummary(productId) {
   container.innerHTML = `
     <div class="ai-reviews__header">
       <h3 class="ai-reviews__title"><svg><use href="#i-spark"/></svg>${t('ai.reviewsSummary')}</h3>
-      <span class="ai-reviews__satisfaction">${data.satisfaction}% ${t('ai.satisfaction')}</span>
+      <span class="ai-reviews__satisfaction">${t('ai.satisfaction')} ${data.rating ?? '—'} / 5.0</span>
     </div>
     <div class="ai-reviews__grid">
       <div class="ai-reviews__col ai-reviews__col--pros">
@@ -1921,6 +2129,7 @@ async function loadAiReviewsSummary(productId) {
       </div>
     </div>
     <p class="ai-reviews__verdict"><strong>${t('ai.verdict')}:</strong> ${escapeHTML(data.verdict)}</p>
+    <p class="ai-reviews__disclaimer">${t('ai.reviewsDisclaimer')}</p>
   `;
 }
 
@@ -2007,6 +2216,7 @@ function closeBundleModal() {
   if (!modal) return;
   modal.classList.remove('is-open');
   setTimeout(() => { modal.hidden = true; }, 200);
+  document.body.style.overflow = '';
   closeDialog();
 }
 
@@ -2047,20 +2257,21 @@ async function submitBundleBuilder(e) {
             <div class="bundle-product-card__info">
               <div class="bundle-product-card__brand">${escapeHTML(it.brand)}</div>
               <div class="bundle-product-card__title">${escapeHTML(it.title)}</div>
-              <div class="bundle-product-card__price">${money(it.price)}</div>
+              <div class="bundle-product-card__price">${it.price == null ? t('gate.pricesHidden') : money(it.price)}</div>
             </div>
           </div>`).join('')}
       </div>
+      ${itemIds.length ? `
       <div class="bundle-summary-bar">
         <div class="bundle-summary-bar__totals">
-          <span class="bundle-summary-bar__total-val">${money(data.total_price)}</span>
+          <span class="bundle-summary-bar__total-val">${data.total_price == null ? t('gate.pricesHidden') : money(data.total_price)}</span>
           ${data.total_savings > 0 ? `<span class="bundle-summary-bar__savings">${t('ai.bundleSavings')} ${money(data.total_savings)}</span>` : ''}
         </div>
         <button class="btn btn--primary" type="button" data-bundle-add-compare="${itemIds.join(',')}">
           <svg><use href="#i-compare"/></svg>
           <span>${t('ai.bundleAddCompare')}</span>
         </button>
-      </div>
+      </div>` : ''}
     `;
   } catch (err) {
     resultsBox.innerHTML = `<p class="empty">${escapeHTML(err.message || 'Error generating bundle')}</p>`;
@@ -2130,6 +2341,7 @@ function wireEvents() {
       state.filter = state.filter === id ? null : id;
       syncCatState();
       applyView();
+      closeCatalogModal();
       return;
     }
 
@@ -2223,8 +2435,15 @@ function wireEvents() {
       return;
     }
 
-    // Открытие модалки ИИ-сборщика комплектов
-    if (e.target.closest('#btn-open-bundle') || e.target.closest('#drawer-bundle-trigger')) {
+    // Раскрытие ИИ-разбора в карточке товара
+    if (e.target.closest('#sheet-ai-toggle')) {
+      toggleSheetAi();
+      return;
+    }
+
+    // Открытие модалки ИИ-сборщика комплектов из панели ассистента
+    if (e.target.closest('#ai-bundle-trigger')) {
+      closeAssistant();
       openBundleModal();
       return;
     }
@@ -2266,6 +2485,9 @@ function wireEvents() {
       return;
     }
 
+    if (e.target.closest('[data-open-catalog]')) { openCatalogModal(); return; }
+    if (e.target.closest('[data-close-catalog]') || e.target.id === 'catalog-modal') { closeCatalogModal(); return; }
+    if (e.target.closest('[data-open-compare]')) { openCompareDrawer(); return; }
     if (e.target.closest('[data-close-compare]')) { closeCompareDrawer(); return; }
     if (e.target.closest('[data-close-compare-modal]')) { closeCompareModal(); return; }
     if (e.target.closest('[data-close-sheet]') || e.target.id === 'overlay') { closeSheet(); return; }
@@ -2337,6 +2559,7 @@ function wireEvents() {
       // внутри requestAnimationFrame, и завязывать на него закрытие окна значит
       // ставить работоспособность в зависимость от кадра отрисовки.
       if ($('#ai-assistant').classList.contains('is-open')) closeAssistant();
+      else if (!$('#catalog-modal').hidden) closeCatalogModal();
       else if (!$('#auth-modal').hidden) closeAuthModal();
       else if (!$('#alert-modal').hidden) closeAlertModal();
       else if (!$('#compare-modal').hidden) closeCompareModal();
@@ -2378,6 +2601,7 @@ function renderAll() {
   renderNav();
   renderHero();
   renderCategories();
+  renderCatalogDrawer();
   renderSections();
   renderPartners();
   renderCompareDrawer();

@@ -1,765 +1,1011 @@
 <!doctype html>
 <html lang="ru">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ArzonOL — агрегатор цен на мебель, технику и стройматериалы в Узбекистане</title>
-<meta name="description" content="ArzonOL — агрегатор цен в Узбекистане. Сравнивайте предложения ведущих маркетплейсов (Uzum, Olcha, Texnomart, Mediapark и др.) и покупайте выгоднее.">
-<link rel="icon" type="image/png" href="/assets/img/logo.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/css/styles.css">
-<style>
-  svg { width: 20px; height: 20px; vertical-align: middle; }
-  header, main, section, nav, footer { box-sizing: border-box; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ArzonOL — агрегатор цен на мебель, технику и стройматериалы в Узбекистане</title>
+  <meta name="description"
+    content="ArzonOL — агрегатор цен в Узбекистане. Сравнивайте предложения ведущих маркетплейсов (Uzum, Olcha, Texnomart, Mediapark и др.) и покупайте выгоднее.">
+  <link rel="icon" type="image/png" href="/assets/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <style>
+    svg {
+      width: 20px;
+      height: 20px;
+      vertical-align: middle;
+    }
+
+    header,
+    main,
+    section,
+    nav,
+    footer {
+      box-sizing: border-box;
+    }
+  </style>
 </head>
+
 <body>
 
-<!-- Иконки: один спрайт, используется через <use> -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-  <defs>
-    <symbol id="i-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 20s-7-4.4-7-9.2A4.2 4.2 0 0 1 12 8a4.2 4.2 0 0 1 7 2.8C19 15.6 12 20 12 20z"/>
-    </symbol>
-    <symbol id="i-compare" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M18 20V10M12 20V4M6 20v-6"/>
-    </symbol>
-    <symbol id="i-external" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
-    </symbol>
-    <symbol id="i-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M5 12h13"/><path d="m12.5 6 6 6-6 6"/>
-    </symbol>
-    <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="m9 5 7 7-7 7"/>
-    </symbol>
-    <symbol id="i-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="m15 5-7 7 7 7"/>
-    </symbol>
-    <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="m6 9 6 6 6-6"/>
-    </symbol>
-    <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-      <path d="M5 5l14 14M19 5 5 19"/>
-    </symbol>
-    <symbol id="i-star" viewBox="0 0 24 24" fill="currentColor">
-      <path d="m12 2.6 2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9z"/>
-    </symbol>
-    <symbol id="i-spark" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2.5 13.8 9l6.5 1.8-6.5 1.8L12 19.1l-1.8-6.5L3.7 10.8 10.2 9z"/>
-    </symbol>
-    <symbol id="i-bed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M3 18v-7h18v7"/><path d="M3 14h18"/><path d="M6 11V8h5v3"/><path d="M3 18v2M21 18v2"/>
-    </symbol>
-    <symbol id="i-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="5" width="18" height="12" rx="2"/><path d="M9 21h6M12 17v4"/>
-    </symbol>
-    <symbol id="i-house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 11 12 4l8 7"/><path d="M6 10v10h12V10"/>
-    </symbol>
-    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-    </symbol>
-    <symbol id="i-map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
-    </symbol>
-    <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
-    </symbol>
-    <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
-    </symbol>
-    <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
-    </symbol>
-    <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
-    </symbol>
-    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
-    </symbol>
-    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M20 6 9 17l-5-5"/>
-    </symbol>
-    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/>
-    </symbol>
-    <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-    </symbol>
-    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-    </symbol>
-    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
-    </symbol>
-    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
-    </symbol>
-    <symbol id="i-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
-    </symbol>
-  </defs>
-</svg>
+  <!-- Иконки: один спрайт, используется через <use> -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20s-7-4.4-7-9.2A4.2 4.2 0 0 1 12 8a4.2 4.2 0 0 1 7 2.8C19 15.6 12 20 12 20z" />
+      </symbol>
+      <symbol id="i-compare" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 20V10M12 20V4M6 20v-6" />
+      </symbol>
+      <symbol id="i-external" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
+      </symbol>
+      <symbol id="i-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12h13" />
+        <path d="m12.5 6 6 6-6 6" />
+      </symbol>
+      <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="m9 5 7 7-7 7" />
+      </symbol>
+      <symbol id="i-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="m15 5-7 7 7 7" />
+      </symbol>
+      <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="m6 9 6 6 6-6" />
+      </symbol>
+      <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+        stroke-linecap="round">
+        <path d="M5 5l14 14M19 5 5 19" />
+      </symbol>
+      <symbol id="i-star" viewBox="0 0 24 24" fill="currentColor">
+        <path d="m12 2.6 2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9z" />
+      </symbol>
+      <symbol id="i-spark" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2.5 13.8 9l6.5 1.8-6.5 1.8L12 19.1l-1.8-6.5L3.7 10.8 10.2 9z" />
+      </symbol>
+      <symbol id="i-bed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M3 18v-7h18v7" />
+        <path d="M3 14h18" />
+        <path d="M6 11V8h5v3" />
+        <path d="M3 18v2M21 18v2" />
+      </symbol>
+      <symbol id="i-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="5" width="18" height="12" rx="2" />
+        <path d="M9 21h6M12 17v4" />
+      </symbol>
+      <symbol id="i-house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 11 12 4l8 7" />
+        <path d="M6 10v10h12V10" />
+      </symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      </symbol>
+      <symbol id="i-map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+        <circle cx="12" cy="10" r="3" />
+      </symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+      </symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4" />
+        <path
+          d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+      </symbol>
+      <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+      </symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 3v18h18" />
+        <path d="m19 9-5 5-4-4-3 3" />
+      </symbol>
+      <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.5-3.5" />
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 6 9 17l-5-5" />
+      </symbol>
+      <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="4" />
+        <path d="M20 21a8 8 0 1 0-16 0" />
+      </symbol>
+      <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round">
+        <rect width="20" height="16" x="2" y="4" rx="2" />
+        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+      </symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round">
+        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+        <circle cx="12" cy="12" r="3" />
+      </symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+      </symbol>
+      <symbol id="i-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="m12 19-7-7 7-7" />
+        <path d="M19 12H5" />
+      </symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      </symbol>
+    </defs>
+  </svg>
 
-<!-- Верхний навбар: зафиксирован вверху страницы -->
-<header class="topnav" id="topnav">
-  <div class="topnav__inner">
-    <div class="topnav__brand-wrap">
-      <a class="topnav__logo" href="#" data-nav="home">
-        <img src="/assets/img/logo.png" alt="ArzonOL" class="topnav__logo-img">
-        <span class="topnav__brand">Arzon<span class="brand-green">OL</span></span>
-      </a>
+  <!-- Верхний навбар: зафиксирован вверху страницы -->
+  <header class="topnav" id="topnav">
+    <div class="topnav__inner">
+      <div class="topnav__brand-wrap">
+        <a class="topnav__logo" href="#" data-nav="home">
+          <img src="/assets/img/logo.png" alt="ArzonOL" class="topnav__logo-img">
+          <span class="topnav__brand">Arzon<span class="brand-green">OL</span></span>
+        </a>
 
-      <!-- Текстовые ссылки категорий: компактные, всегда доступны -->
-      <nav class="topnav__nav" id="topnav-cats" data-i18n-attr="aria-label:categories.aria"></nav>
-    </div>
-
-    <!-- Поиск в шапке: ровный, гармоничный и сбалансированный -->
-    <div class="topnav__search" id="topnav-search">
-      <form class="search__field search__field--top" id="search-form-top" autocomplete="off" role="search">
-        <svg class="search__icon" aria-hidden="true"><use href="#i-search"/></svg>
-        <label class="visually-hidden" for="q-top" data-i18n="search.label"></label>
-        <input class="search__input" id="q-top" name="q-top" type="search"
-               data-i18n-attr="placeholder:search.placeholder">
-        <span class="search__keyhint" title="Нажмите / для поиска">/</span>
-        <button class="search__clear" type="button" id="search-clear-top" hidden data-i18n-attr="aria-label:search.clear"><svg><use href="#i-close"/></svg></button>
-        <button class="search__submit" type="submit" data-i18n-attr="aria-label:search.submit"><svg><use href="#i-arrow-right"/></svg></button>
-      </form>
-      <div class="search__suggest" id="suggest-top" hidden role="listbox"></div>
-    </div>
-
-    <div class="topnav__actions">
-      <!-- Кнопка ИИ-сборщика комплектов -->
-      <button class="topnav__btn topnav__btn--bundle" type="button" id="btn-open-bundle" data-i18n-attr="title:ai.bundleBuilder,aria-label:ai.bundleBuilder">
-        <svg><use href="#i-spark"/></svg>
-        <span class="topnav__bundle-text" data-i18n="ai.bundleBuilder"></span>
-      </button>
-
-      <!-- Селектор города/региона -->
-      <div class="region-select" id="region-select-wrap">
-        <button class="region-select__btn" type="button" id="region-btn" aria-haspopup="listbox" aria-expanded="false">
-          <svg class="region-select__icon"><use href="#i-map-pin"/></svg>
-          <span id="region-current-label">Ташкент</span>
-          <svg class="region-select__chevron"><use href="#i-chevron-down"/></svg>
-        </button>
-        <div class="region-select__dropdown" id="region-dropdown" hidden role="listbox"></div>
+        <!-- Текстовые ссылки категорий: компактные, всегда доступны -->
+        <nav class="topnav__nav" id="topnav-cats" data-i18n-attr="aria-label:categories.aria"></nav>
       </div>
 
-      <!-- Переключатель тёмной темы -->
-      <button class="topnav__btn" type="button" id="theme-toggle" data-i18n-attr="title:theme.toggle,aria-label:theme.toggle">
-        <svg class="icon-theme icon-moon"><use href="#i-moon"/></svg>
-        <svg class="icon-theme icon-sun"><use href="#i-sun"/></svg>
-      </button>
-
-      <button class="topnav__btn" type="button" data-nav="favorites" data-i18n-attr="title:nav.favorites,aria-label:nav.favorites">
-        <svg><use href="#i-heart"/></svg>
-        <span class="topnav__badge" id="badge-fav" hidden>0</span>
-      </button>
-      <button class="topnav__btn" type="button" data-open-compare data-i18n-attr="title:nav.compare,aria-label:nav.compare">
-        <svg><use href="#i-compare"/></svg>
-        <span class="topnav__badge" id="badge-compare" hidden>0</span>
-      </button>
-      <div class="lang" id="lang" role="group" data-i18n-attr="aria-label:lang.aria"></div>
-
-      <!-- Вход / регистрация / меню профиля -->
-      <div class="topnav__auth" id="auth-actions"></div>
-    </div>
-  </div>
-</header>
-
-<div class="shell">
-
-  <!-- Нижний бар — только мобильный -->
-  <nav class="rail" id="rail" data-i18n-attr="aria-label:categories.aria"></nav>
-
-  <main class="content">
-
-    <!-- Hero -->
-    <section class="hero">
-      <div class="hero__stage">
-        <div class="constellation" id="constellation"></div>
+      <!-- Поиск в шапке: ровный, гармоничный и сбалансированный -->
+      <div class="topnav__search" id="topnav-search">
+        <form class="search__field search__field--top" id="search-form-top" autocomplete="off" role="search">
+          <svg class="search__icon" aria-hidden="true">
+            <use href="#i-search" />
+          </svg>
+          <label class="visually-hidden" for="q-top" data-i18n="search.label"></label>
+          <input class="search__input" id="q-top" name="q-top" type="search"
+            data-i18n-attr="placeholder:search.placeholder">
+          <span class="search__keyhint" title="Нажмите / для поиска">/</span>
+          <button class="search__clear" type="button" id="search-clear-top" hidden
+            data-i18n-attr="aria-label:search.clear"><svg>
+              <use href="#i-close" />
+            </svg></button>
+          <button class="search__submit" type="submit" data-i18n-attr="aria-label:search.submit"><svg>
+              <use href="#i-arrow-right" />
+            </svg></button>
+        </form>
+        <div class="search__suggest" id="suggest-top" hidden role="listbox"></div>
       </div>
 
-      <div class="page">
-        <h1 class="wordmark">
-          <span class="wordmark__main">Arzon</span><span class="wordmark__ol"><img src="/assets/img/logo.png" alt="O" class="wordmark__emblem-o">L</span>
-        </h1>
-        <p class="hero__tagline" data-i18n="hero.tagline"></p>
-
-        <div class="search" role="search">
-          <form class="search__field" id="search-form" autocomplete="off">
-            <svg class="search__icon" aria-hidden="true"><use href="#i-search"/></svg>
-            <label class="visually-hidden" for="q" data-i18n="search.label"></label>
-            <input class="search__input" id="q" name="q" type="search" aria-describedby="search-hint"
-                   data-i18n-attr="placeholder:search.placeholder">
-            <span class="search__keyhint" title="Нажмите / для поиска">/</span>
-            <button class="search__clear" type="button" id="search-clear" hidden data-i18n-attr="aria-label:search.clear"><svg><use href="#i-close"/></svg></button>
-            <button class="search__submit" type="submit" data-i18n-attr="aria-label:search.submit"><svg><use href="#i-arrow-right"/></svg></button>
-          </form>
-          <span class="visually-hidden" id="search-hint" data-i18n="search.hint"></span>
-          <div class="search__suggest" id="suggest" hidden role="listbox"></div>
-        </div>
-
-        <!-- Category pills -->
-        <div class="categories" id="categories" role="group" data-i18n-attr="aria-label:categories.aria"></div>
-      </div>
-    </section>
-
-    <div class="page">
-
-      <!-- Панель сортировки и умных фильтров -->
-      <div class="controls-bar" id="controls-bar">
-        <div class="controls-bar__sort">
-          <label class="controls-bar__label" for="sort-select" data-i18n="sort.label"></label>
-          <div class="select-wrap">
-            <select class="select" id="sort-select">
-              <option value="priceAsc" data-i18n="sort.priceAsc"></option>
-              <option value="savingsDesc" data-i18n="sort.savingsDesc"></option>
-              <option value="ratingDesc" data-i18n="sort.ratingDesc"></option>
-              <option value="popularDesc" data-i18n="sort.popularDesc"></option>
-            </select>
-            <svg class="select-arrow"><use href="#i-chevron-down"/></svg>
-          </div>
-        </div>
-
-        <div class="controls-bar__filters">
-          <button class="filter-pill" type="button" id="filter-stock" aria-pressed="false">
-            <svg class="filter-pill__icon"><use href="#i-check"/></svg>
-            <span data-i18n="filter.inStock"></span>
+      <div class="topnav__actions">
+        <!-- Селектор города/региона -->
+        <div class="region-select" id="region-select-wrap">
+          <button class="region-select__btn" type="button" id="region-btn" aria-haspopup="listbox"
+            aria-expanded="false">
+            <svg class="region-select__icon">
+              <use href="#i-map-pin" />
+            </svg>
+            <span id="region-current-label">Ташкент</span>
+            <svg class="region-select__chevron">
+              <use href="#i-chevron-down" />
+            </svg>
           </button>
-          <div class="platform-chips" id="platform-chips"></div>
+          <div class="region-select__dropdown" id="region-dropdown" hidden role="listbox"></div>
         </div>
-      </div>
 
-      <!-- Результаты поиска / фильтра / отслеживаемых -->
-      <section class="results section" id="results" hidden aria-live="polite">
-        <div class="section__head">
-          <h2 class="section__title" id="results-title">Результаты</h2>
-          <button class="section__chevron" type="button" data-reset data-i18n-attr="title:results.reset,aria-label:results.reset"><svg><use href="#i-close"/></svg></button>
-          <span class="section__count" id="results-count"></span>
+        <!-- Переключатель тёмной темы -->
+        <button class="topnav__btn" type="button" id="theme-toggle"
+          data-i18n-attr="title:theme.toggle,aria-label:theme.toggle">
+          <svg class="icon-theme icon-moon">
+            <use href="#i-moon" />
+          </svg>
+          <svg class="icon-theme icon-sun">
+            <use href="#i-sun" />
+          </svg>
+        </button>
+
+        <button class="topnav__btn" type="button" data-nav="favorites"
+          data-i18n-attr="title:nav.favorites,aria-label:nav.favorites">
+          <svg>
+            <use href="#i-heart" />
+          </svg>
+          <span class="topnav__badge" id="badge-fav" hidden>0</span>
+        </button>
+        <button class="topnav__btn" type="button" data-open-compare
+          data-i18n-attr="title:nav.compare,aria-label:nav.compare">
+          <svg>
+            <use href="#i-compare" />
+          </svg>
+          <span class="topnav__badge" id="badge-compare" hidden>0</span>
+        </button>
+        <div class="lang" id="lang" role="group" data-i18n-attr="aria-label:lang.aria"></div>
+
+        <!-- Вход / регистрация / меню профиля -->
+        <div class="topnav__auth" id="auth-actions"></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="shell">
+
+    <!-- Нижний бар — только мобильный -->
+    <nav class="rail" id="rail" data-i18n-attr="aria-label:categories.aria"></nav>
+
+    <main class="content">
+
+      <!-- Hero -->
+      <section class="hero">
+        <div class="hero__stage">
+          <div class="constellation" id="constellation"></div>
         </div>
-        <div class="grid" id="results-grid"></div>
+
+        <div class="page">
+          <h1 class="wordmark">
+            <span class="wordmark__main">Arzon</span><span class="wordmark__ol"><img src="/assets/img/logo.png" alt="O"
+                class="wordmark__emblem-o">L</span>
+          </h1>
+          <p class="hero__tagline" data-i18n="hero.tagline"></p>
+
+          <div class="search" role="search">
+            <form class="search__field" id="search-form" autocomplete="off">
+              <svg class="search__icon" aria-hidden="true">
+                <use href="#i-search" />
+              </svg>
+              <label class="visually-hidden" for="q" data-i18n="search.label"></label>
+              <input class="search__input" id="q" name="q" type="search" aria-describedby="search-hint"
+                data-i18n-attr="placeholder:search.placeholder">
+              <span class="search__keyhint" title="Нажмите / для поиска">/</span>
+              <button class="search__clear" type="button" id="search-clear" hidden
+                data-i18n-attr="aria-label:search.clear"><svg>
+                  <use href="#i-close" />
+                </svg></button>
+              <button class="search__submit" type="submit" data-i18n-attr="aria-label:search.submit"><svg>
+                  <use href="#i-arrow-right" />
+                </svg></button>
+            </form>
+            <span class="visually-hidden" id="search-hint" data-i18n="search.hint"></span>
+            <div class="search__suggest" id="suggest" hidden role="listbox"></div>
+          </div>
+
+          <!-- Category pills -->
+          <div class="categories" id="categories" role="group" data-i18n-attr="aria-label:categories.aria"></div>
+        </div>
       </section>
 
-      <!-- Личный кабинет (Полноценная выделенная страница профиля) -->
-      <section class="cabinet-page" id="cabinet" hidden aria-labelledby="cabinet-name">
-        <!-- Кнопка возврата к покупкам / каталогу -->
-        <div class="cabinet-page__nav">
-          <button class="cabinet-page__back-btn" type="button" data-nav="home">
-            <svg><use href="#i-arrow-left"/></svg>
-            <span data-i18n="cabinet.back">← Назад к покупкам</span>
-          </button>
-          <div class="cabinet-page__badge">
-            <svg><use href="#i-shield"/></svg>
-            <span data-i18n="cabinet.title">Личный кабинет</span>
+      <div class="page">
+
+        <!-- Панель сортировки и умных фильтров -->
+        <div class="controls-bar" id="controls-bar">
+          <div class="controls-bar__sort">
+            <label class="controls-bar__label" for="sort-select" data-i18n="sort.label"></label>
+            <div class="select-wrap">
+              <select class="select" id="sort-select">
+                <option value="priceAsc" data-i18n="sort.priceAsc"></option>
+                <option value="savingsDesc" data-i18n="sort.savingsDesc"></option>
+                <option value="ratingDesc" data-i18n="sort.ratingDesc"></option>
+                <option value="popularDesc" data-i18n="sort.popularDesc"></option>
+              </select>
+              <svg class="select-arrow">
+                <use href="#i-chevron-down" />
+              </svg>
+            </div>
+          </div>
+
+          <div class="controls-bar__filters">
+            <button class="filter-pill" type="button" id="filter-stock" aria-pressed="false">
+              <svg class="filter-pill__icon">
+                <use href="#i-check" />
+              </svg>
+              <span data-i18n="filter.inStock"></span>
+            </button>
+            <div class="platform-chips" id="platform-chips"></div>
           </div>
         </div>
 
-        <!-- Карточка профиля / баннер -->
-        <div class="cab-profile-card">
-          <div class="cab-profile-card__user">
-            <div class="cab-profile-card__avatar" id="cabinet-avatar">A</div>
-            <div class="cab-profile-card__meta">
-              <div class="cab-profile-card__name-row">
-                <h2 class="cab-profile-card__name" id="cabinet-name"></h2>
-                <span class="cab-profile-card__role" id="cabinet-role" data-i18n="cabinet.buyer">Покупатель</span>
+        <!-- Результаты поиска / фильтра / отслеживаемых -->
+        <section class="results section" id="results" hidden aria-live="polite">
+          <div class="section__head">
+            <h2 class="section__title" id="results-title">Результаты</h2>
+            <button class="section__chevron" type="button" data-reset
+              data-i18n-attr="title:results.reset,aria-label:results.reset"><svg>
+                <use href="#i-close" />
+              </svg></button>
+            <span class="section__count" id="results-count"></span>
+          </div>
+          <div class="grid" id="results-grid"></div>
+        </section>
+
+        <!-- Личный кабинет (Полноценная выделенная страница профиля) -->
+        <section class="cabinet-page" id="cabinet" hidden aria-labelledby="cabinet-name">
+          <!-- Кнопка возврата к покупкам / каталогу -->
+          <div class="cabinet-page__nav">
+            <button class="cabinet-page__back-btn" type="button" data-nav="home">
+              <svg>
+                <use href="#i-arrow-left" />
+              </svg>
+              <span data-i18n="cabinet.back">← Назад к покупкам</span>
+            </button>
+            <div class="cabinet-page__badge">
+              <svg>
+                <use href="#i-shield" />
+              </svg>
+              <span data-i18n="cabinet.title">Личный кабинет</span>
+            </div>
+          </div>
+
+          <!-- Карточка профиля / баннер -->
+          <div class="cab-profile-card">
+            <div class="cab-profile-card__user">
+              <div class="cab-profile-card__avatar" id="cabinet-avatar">A</div>
+              <div class="cab-profile-card__meta">
+                <div class="cab-profile-card__name-row">
+                  <h2 class="cab-profile-card__name" id="cabinet-name"></h2>
+                  <span class="cab-profile-card__role" id="cabinet-role" data-i18n="cabinet.buyer">Покупатель</span>
+                </div>
+                <p class="cab-profile-card__email" id="cabinet-email"></p>
               </div>
-              <p class="cab-profile-card__email" id="cabinet-email"></p>
+            </div>
+
+            <div class="cab-profile-card__stats">
+              <div class="cab-stat-box">
+                <span class="cab-stat-box__val" id="cabinet-count">0</span>
+                <span class="cab-stat-box__label" data-i18n="cabinet.tracking">отслеживается</span>
+              </div>
+              <div class="cab-stat-box">
+                <span class="cab-stat-box__val" id="cabinet-reached">0</span>
+                <span class="cab-stat-box__label" data-i18n="cabinet.reachedCount">цели достигнуто</span>
+              </div>
+            </div>
+
+            <div class="cab-profile-card__actions">
+              <a class="btn btn--ghost cab-profile-card__admin" id="cabinet-admin" href="/admin" hidden
+                data-i18n="cabinet.admin"></a>
+              <button class="btn-cab-logout" type="button" id="cab-logout-btn">
+                <svg>
+                  <use href="#i-close" />
+                </svg>
+                <span data-i18n="auth.logout">Выйти</span>
+              </button>
             </div>
           </div>
 
-          <div class="cab-profile-card__stats">
-            <div class="cab-stat-box">
-              <span class="cab-stat-box__val" id="cabinet-count">0</span>
-              <span class="cab-stat-box__label" data-i18n="cabinet.tracking">отслеживается</span>
-            </div>
-            <div class="cab-stat-box">
-              <span class="cab-stat-box__val" id="cabinet-reached">0</span>
-              <span class="cab-stat-box__label" data-i18n="cabinet.reachedCount">цели достигнуто</span>
+          <!-- Навигационные вкладки кабинета -->
+          <div class="cabinet__tabs" role="tablist">
+            <button class="cab-tab is-active" type="button" data-tab="tracked">
+              <svg>
+                <use href="#i-heart" />
+              </svg>
+              <span data-i18n="cabinet.tabTracked">Отслеживаемые</span>
+            </button>
+            <button class="cab-tab" type="button" data-tab="activity">
+              <svg>
+                <use href="#i-chart" />
+              </svg>
+              <span data-i18n="cabinet.tabActivity">История</span>
+            </button>
+            <button class="cab-tab" type="button" data-tab="settings">
+              <svg>
+                <use href="#i-user" />
+              </svg>
+              <span data-i18n="cabinet.tabSettings">Настройки</span>
+            </button>
+          </div>
+
+          <!-- Вкладка 1: Отслеживаемые товары -->
+          <div class="cabinet__pane" id="pane-tracked">
+            <div class="cabinet__list" id="cabinet-list"></div>
+          </div>
+
+          <!-- Вкладка 2: История просмотров и запросов -->
+          <div class="cabinet__pane" id="pane-activity" hidden>
+            <div class="cab-cols">
+              <div class="cab-card">
+                <h3 class="cab-sub" data-i18n="cabinet.recentViews"></h3>
+                <div id="cabinet-viewed"></div>
+              </div>
+              <div class="cab-card">
+                <h3 class="cab-sub" data-i18n="cabinet.recentSearches"></h3>
+                <div id="cabinet-searches"></div>
+              </div>
             </div>
           </div>
 
-          <div class="cab-profile-card__actions">
-            <a class="btn btn--ghost cab-profile-card__admin" id="cabinet-admin" href="/admin" hidden data-i18n="cabinet.admin"></a>
-            <button class="btn-cab-logout" type="button" id="cab-logout-btn">
-              <svg><use href="#i-close"/></svg>
-              <span data-i18n="auth.logout">Выйти</span>
+          <!-- Вкладка 3: Настройки аккаунта и смена пароля -->
+          <div class="cabinet__pane" id="pane-settings" hidden>
+            <div class="cab-cols">
+              <form class="cab-form cab-card" id="profile-form">
+                <h3 class="cab-sub" data-i18n="cabinet.myData"></h3>
+                <div class="form-row">
+                  <label class="form-label" for="prof-name" data-i18n="auth.nameLabel"></label>
+                  <input class="form-input" id="prof-name" type="text" maxlength="80">
+                </div>
+                <div class="form-row">
+                  <label class="form-label" for="prof-region" data-i18n="cabinet.region"></label>
+                  <div class="select-wrap">
+                    <select class="select" id="prof-region"></select>
+                    <svg class="select-arrow">
+                      <use href="#i-chevron-down" />
+                    </svg>
+                  </div>
+                </div>
+                <p class="cab-msg" id="profile-msg" hidden></p>
+                <button class="btn btn--primary" type="submit" data-i18n="cabinet.save"></button>
+              </form>
+
+              <form class="cab-form cab-card" id="password-form">
+                <h3 class="cab-sub" data-i18n="cabinet.changePassword"></h3>
+                <div class="form-row">
+                  <label class="form-label" for="pw-current" data-i18n="cabinet.currentPassword"></label>
+                  <input class="form-input" id="pw-current" type="password" required autocomplete="current-password">
+                </div>
+                <div class="form-row">
+                  <label class="form-label" for="pw-new" data-i18n="cabinet.newPassword"></label>
+                  <input class="form-input" id="pw-new" type="password" required minlength="6"
+                    autocomplete="new-password">
+                </div>
+                <p class="cab-msg" id="password-msg" hidden></p>
+                <button class="btn btn--ghost" type="submit" data-i18n="cabinet.save"></button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- Сработавшие цели по цене -->
+        <div class="notif" id="notifications" hidden></div>
+
+        <!-- Три категории: точка входа в каталог -->
+        <section class="cats" id="cats" aria-labelledby="cats-title">
+          <div class="cats__head">
+            <h2 class="cats__title" id="cats-title" data-i18n="cats.title"></h2>
+            <p class="cats__sub" data-i18n="cats.sub"></p>
+          </div>
+          <div class="cats__grid" id="cats-grid"></div>
+        </section>
+
+        <!-- Ленты по категориям + самые популярные с выгодой -->
+        <div class="sections" id="sections"></div>
+      </div>
+
+      <!-- Маркетплейсы и бренды: светлая полоса во всю ширину -->
+      <section class="partners" id="partners" aria-labelledby="partners-title">
+        <div class="page">
+          <div class="partners__head">
+            <div class="partners__badge">
+              <span data-i18n="partners.badge">⚡ 8 маркетплейсов · 120+ брендов</span>
+            </div>
+            <h2 class="partners__title" id="partners-title" data-i18n="partners.title"></h2>
+            <p class="partners__sub" data-i18n="partners.sub"></p>
+          </div>
+        </div>
+        <div class="partners__viewport">
+          <div class="partners__track" id="partners-track"></div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <div class="footer__inner">
+          <div>
+            <div class="footer__mark">
+              <img src="/assets/img/logo.png" alt="ArzonOL" class="footer__logo-img">
+              <span>Arzon<span class="brand-green">OL</span></span>
+            </div>
+            <p class="footer__blurb" data-i18n="footer.blurb"></p>
+          </div>
+          <div class="footer__col">
+            <h3 data-i18n="footer.shop"></h3>
+            <ul>
+              <li><a href="#" data-i18n="footer.link.selections"></a></li>
+              <li><a href="#" data-i18n="footer.link.brands"></a></li>
+              <li><a href="#" data-i18n="footer.link.new"></a></li>
+              <li><a href="#" data-i18n="footer.link.sale"></a></li>
+            </ul>
+          </div>
+          <div class="footer__col">
+            <h3 data-i18n="footer.help"></h3>
+            <ul>
+              <li><a href="#" data-i18n="footer.link.delivery"></a></li>
+              <li><a href="#" data-i18n="footer.link.returns"></a></li>
+              <li><a href="#" data-i18n="footer.link.tracking"></a></li>
+              <li><a href="#" data-i18n="footer.link.support"></a></li>
+            </ul>
+          </div>
+          <div class="footer__col">
+            <h3 data-i18n="footer.company"></h3>
+            <ul>
+              <li><a href="#" data-i18n="footer.link.about"></a></li>
+              <li><a href="#" data-i18n="footer.link.jobs"></a></li>
+              <li><a href="#" data-i18n="footer.link.press"></a></li>
+              <li><a href="#" data-i18n="footer.link.partners"></a></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Юридический дисклеймер агрегатора -->
+        <div class="footer__disclaimer-box">
+          <p class="footer__disclaimer-text" data-i18n="footer.disclaimer"></p>
+        </div>
+
+        <div class="footer__base">
+          <span>© 2026 ArzonOL — <span data-i18n="footer.tagline"></span></span>
+          <span data-i18n="footer.legal"></span>
+        </div>
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- Модалка товара: блок сравнения цен на маркетплейсах -->
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="sheet-brand" hidden>
+    <div class="sheet" id="sheet">
+      <button class="sheet__close" type="button" data-close-sheet data-i18n-attr="aria-label:sheet.close"><svg>
+          <use href="#i-close" />
+        </svg></button>
+      <div class="sheet__media">
+        <img id="sheet-image" src="" alt="">
+        <div class="sheet__thumbs" id="sheet-thumbs"></div>
+
+        <!-- График истории цен -->
+        <div class="sheet__chart-box" id="sheet-chart-box">
+          <div class="sheet__chart-header">
+            <div class="sheet__chart-title-wrap">
+              <svg class="sheet__chart-icon">
+                <use href="#i-chart" />
+              </svg>
+              <span class="sheet__chart-title" data-i18n="chart.title"></span>
+            </div>
+            <span class="sheet__trend-badge" id="sheet-trend-badge"></span>
+          </div>
+          <div class="sheet__chart-canvas" id="sheet-chart"></div>
+        </div>
+      </div>
+
+      <div class="sheet__body">
+        <div class="sheet__header">
+          <h2 class="sheet__brand" id="sheet-brand"></h2>
+          <p class="sheet__title" id="sheet-title"></p>
+          <div class="sheet__rating" id="sheet-rating"></div>
+        </div>
+
+        <div class="sheet__price-panel">
+          <div class="sheet__price" id="sheet-price"></div>
+          <div class="sheet__savings-badge" id="sheet-savings"></div>
+        </div>
+
+        <p class="sheet__desc" id="sheet-desc"></p>
+
+        <div class="sheet__offers-section">
+          <div class="sheet__offers-heading" data-i18n="sheet.offersTitle"></div>
+
+          <!-- Список предложений + гейт поверх него для незарегистрированных -->
+          <div class="offers-wrap">
+            <div class="sheet__offers-table" id="sheet-offers"></div>
+
+            <div class="offers-gate" id="offers-gate" hidden>
+              <div class="offers-gate__card">
+                <svg class="offers-gate__icon">
+                  <use href="#i-chart" />
+                </svg>
+                <p class="offers-gate__title" data-i18n="gate.title"></p>
+                <p class="offers-gate__text" data-i18n="gate.text"></p>
+                <div class="offers-gate__actions">
+                  <button class="btn btn--primary" type="button" data-auth="register"
+                    data-i18n="auth.register"></button>
+                  <button class="btn btn--ghost" type="button" data-auth="login" data-i18n="auth.login"></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="sheet__disclaimer" data-i18n="sheet.disclaimer"></p>
+        </div>
+
+        <div class="sheet__actions">
+          <button class="btn btn--primary" type="button" id="sheet-compare">
+            <svg>
+              <use href="#i-compare" />
+            </svg>
+            <span id="sheet-compare-label" data-i18n="sheet.compareAdd"></span>
+          </button>
+          <button class="btn btn--ghost" type="button" id="sheet-alert-btn"
+            data-i18n-attr="title:alert.btn,aria-label:alert.btn">
+            <svg>
+              <use href="#i-bell" />
+            </svg>
+          </button>
+          <button class="btn btn--ghost" type="button" id="sheet-fav"
+            data-i18n-attr="title:sheet.trackPrice,aria-label:sheet.trackPrice">
+            <svg>
+              <use href="#i-heart" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- ИИ-разбор во всю ширину карточки: в узкой правой колонке тот же текст
+         вытягивался на 455px вверх, здесь блоки встают рядом и он вдвое ниже -->
+      <div class="sheet__ai-section">
+        <button class="sheet__ai-toggle" type="button" id="sheet-ai-toggle" aria-expanded="false"
+          aria-controls="sheet-ai-panel">
+          <svg class="sheet__ai-toggle-spark">
+            <use href="#i-spark" />
+          </svg>
+          <span data-i18n="ai.sheetToggle"></span>
+          <svg class="sheet__ai-chevron">
+            <use href="#i-chevron-down" />
+          </svg>
+        </button>
+
+        <div class="sheet__ai-panel" id="sheet-ai-panel" hidden>
+          <!-- ИИ-советник по цене -->
+          <div class="sheet__ai-advisor" id="sheet-ai-advisor" hidden></div>
+          <!-- ИИ-обзор модели -->
+          <div class="sheet__ai-reviews" id="sheet-ai-reviews" hidden></div>
+        </div>
+      </div>
+
+      <div class="sheet__footer">
+        <button class="btn-sheet-close-bottom" type="button" data-close-sheet>
+          <svg>
+            <use href="#i-close" />
+          </svg>
+          <span data-i18n="sheet.close">Yopish</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модалка: подписка на снижение цены -->
+  <div class="overlay overlay--alert" id="alert-modal" role="dialog" aria-modal="true"
+    aria-labelledby="alert-modal-title" hidden>
+    <div class="alert-box">
+      <button class="alert-box__close" type="button" data-close-alert data-i18n-attr="aria-label:sheet.close"><svg>
+          <use href="#i-close" />
+        </svg></button>
+      <div class="alert-box__head">
+        <div class="alert-box__icon"><svg>
+            <use href="#i-bell" />
+          </svg></div>
+        <h2 class="alert-box__title" id="alert-modal-title" data-i18n="alert.title"></h2>
+        <p class="alert-box__subtitle" data-i18n="alert.subtitle"></p>
+      </div>
+      <form class="alert-box__form" id="alert-form">
+        <div class="form-group">
+          <label class="form-label" for="alert-target-price" data-i18n="alert.targetLabel"></label>
+          <input class="form-input" id="alert-target-price" type="number" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="alert-contact" data-i18n="alert.contactLabel"></label>
+          <input class="form-input" id="alert-contact" type="text" placeholder="@username или name@mail.uz" required>
+        </div>
+        <button class="btn btn--primary alert-box__submit" type="submit" data-i18n="alert.submit"></button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Выдвижная панель: список сравнения -->
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" data-i18n-attr="aria-label:compare.drawerTitle" aria-hidden="true">
+    <div class="drawer__head">
+      <div class="drawer__title-wrap">
+        <svg class="drawer__title-icon">
+          <use href="#i-compare" />
+        </svg>
+        <h2 class="drawer__title" data-i18n="compare.drawerTitle"></h2>
+      </div>
+      <button class="drawer__close" type="button" data-close-compare data-i18n-attr="aria-label:sheet.close"><svg>
+          <use href="#i-close" />
+        </svg></button>
+    </div>
+    <div class="drawer__list" id="compare-list"></div>
+
+    <!-- Калькулятор общей экономии комплекта -->
+    <div class="drawer__bundle-summary" id="drawer-bundle"></div>
+
+    <div class="drawer__foot">
+      <button class="btn btn--primary" type="button" id="open-compare-modal" data-i18n="compare.openModal"></button>
+      <button class="btn btn--ghost btn--clear" type="button" id="clear-compare" data-i18n="compare.clear"></button>
+    </div>
+  </aside>
+
+  <!-- Модальное окно: подробная таблица сравнения товаров -->
+  <div class="overlay overlay--compare" id="compare-modal" role="dialog" aria-modal="true"
+    aria-labelledby="compare-modal-title" hidden>
+    <div class="compare-modal">
+      <div class="compare-modal__head">
+        <div class="compare-modal__title-wrap">
+          <svg class="compare-modal__title-icon">
+            <use href="#i-compare" />
+          </svg>
+          <h2 class="compare-modal__title" id="compare-modal-title" data-i18n="compare.modalTitle"></h2>
+        </div>
+        <button class="compare-modal__close" type="button" data-close-compare-modal
+          data-i18n-attr="aria-label:sheet.close"><svg>
+            <use href="#i-close" />
+          </svg></button>
+      </div>
+      <div class="compare-modal__body" id="compare-table-container"></div>
+    </div>
+  </div>
+
+  <!-- Модальное окно: ИИ-сборщик комплектов под бюджет -->
+  <div class="overlay overlay--bundle" id="bundle-modal" role="dialog" aria-modal="true"
+    aria-labelledby="bundle-modal-title" hidden>
+    <div class="bundle-modal">
+      <button class="bundle-modal__close" type="button" data-close-bundle-modal
+        data-i18n-attr="aria-label:sheet.close"><svg>
+          <use href="#i-close" />
+        </svg></button>
+
+      <div class="bundle-modal__head">
+        <div class="bundle-modal__badge">
+          <svg>
+            <use href="#i-spark" />
+          </svg>
+          <span data-i18n="ai.bundleBuilder"></span>
+        </div>
+        <h2 class="bundle-modal__title" id="bundle-modal-title" data-i18n="ai.bundleTitle"></h2>
+        <p class="bundle-modal__subtitle" data-i18n="ai.bundleSubtitle"></p>
+      </div>
+
+      <form class="bundle-modal__form" id="bundle-form">
+        <div class="bundle-modal__row">
+          <div class="bundle-modal__field bundle-modal__field--query">
+            <label class="form-label" for="bundle-query-input" data-i18n="ai.bundleQuery"></label>
+            <input class="form-input" id="bundle-query-input" type="text" required
+              data-i18n-attr="placeholder:ai.bundleQueryPlaceholder">
+          </div>
+          <div class="bundle-modal__field bundle-modal__field--budget">
+            <label class="form-label" for="bundle-budget-input" data-i18n="ai.bundleBudget"></label>
+            <input class="form-input" id="bundle-budget-input" type="number" step="500000" min="500000"
+              placeholder="10 000 000">
+          </div>
+        </div>
+
+        <!-- Быстрые пресеты -->
+        <div class="bundle-presets" id="bundle-presets">
+          <!-- data-query перечисляет сами товары: поиск идёт по названиям каталога,
+             от общих слов вроде «техника» совпадений не будет -->
+          <button type="button" class="bundle-chip"
+            data-query="варочная панель духовой посудомоечная микроволновая кофемашина" data-budget="15000000"
+            data-i18n="ai.bundlePresetKitchen"></button>
+          <button type="button" class="bundle-chip" data-query="ламинат обои краска гипсокартон утеплитель"
+            data-budget="8000000" data-i18n="ai.bundlePresetBedroom"></button>
+          <button type="button" class="bundle-chip" data-query="диван тумба телевизор стеллаж комод"
+            data-budget="12000000" data-i18n="ai.bundlePresetLiving"></button>
+        </div>
+
+        <button class="btn btn--primary bundle-modal__submit" type="submit" id="bundle-submit-btn">
+          <svg>
+            <use href="#i-spark" />
+          </svg>
+          <span data-i18n="ai.bundleSubmit"></span>
+        </button>
+      </form>
+
+      <div class="bundle-results" id="bundle-results" hidden></div>
+    </div>
+  </div>
+
+  <!-- Cookie consent -->
+  <div class="cookie" id="cookie" hidden>
+    <p class="cookie__text">
+      <span data-i18n="cookie.text"></span> <a href="#" data-i18n="cookie.link"></a>.
+    </p>
+    <div class="cookie__actions">
+      <button class="cookie__btn" type="button" data-cookie="reject" data-i18n="cookie.reject"></button>
+      <button class="cookie__btn" type="button" data-cookie="accept" data-i18n="cookie.accept"></button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- ArzonOL AI: faqat katalog va xarid tanlovi bo'yicha maslahatchi -->
+  <button class="ai-fab" id="ai-assistant-toggle" type="button" aria-controls="ai-assistant" aria-expanded="false">
+    <span class="ai-fab__ring" aria-hidden="true"></span>
+    <span class="ai-fab__glyph" aria-hidden="true">
+      <svg class="ai-fab__spark">
+        <use href="#i-spark" />
+      </svg>
+      <svg class="ai-fab__close">
+        <use href="#i-close" />
+      </svg>
+    </span>
+    <span class="ai-fab__hint" id="ai-fab-hint">Sizga nima yordam kerak?</span>
+  </button>
+
+  <aside class="ai-assistant" id="ai-assistant" role="dialog" aria-label="ArzonOL AI maslahatchisi" aria-hidden="true">
+    <header class="ai-assistant__head">
+      <span class="ai-assistant__avatar" aria-hidden="true"><svg>
+          <use href="#i-spark" />
+        </svg></span>
+      <div class="ai-assistant__id">
+        <strong id="ai-assistant-title">ArzonOL AI</strong>
+        <span class="ai-assistant__status" id="ai-assistant-status">Xarid maslahatchisi</span>
+      </div>
+      <button class="ai-assistant__act" id="ai-assistant-reset" type="button" aria-label="Suhbatni tozalash"><svg>
+          <use href="#i-trash" />
+        </svg></button>
+      <button class="ai-assistant__act" id="ai-assistant-close" type="button" aria-label="Yopish"><svg>
+          <use href="#i-close" />
+        </svg></button>
+    </header>
+
+    <div class="ai-context" id="ai-assistant-context" hidden></div>
+
+    <div class="ai-assistant__messages" id="ai-assistant-messages" aria-live="polite"></div>
+
+    <!-- Вход в ИИ-сборщик комплектов под бюджет -->
+    <button class="ai-assistant__bundle" type="button" id="ai-bundle-trigger">
+      <svg>
+        <use href="#i-spark" />
+      </svg>
+      <span data-i18n="ai.bundleBuilder"></span>
+    </button>
+
+    <div class="ai-assistant__prompts" id="ai-assistant-prompts"></div>
+
+    <form class="ai-assistant__form" id="ai-assistant-form">
+      <label class="sr-only" for="ai-assistant-input">ArzonOL AI ga savol</label>
+      <input id="ai-assistant-input" type="text" maxlength="500" autocomplete="off"
+        placeholder="Masalan: Samsung qayerda arzon?">
+      <button class="ai-assistant__send" type="submit" aria-label="Yuborish"><svg>
+          <use href="#i-arrow-right" />
+        </svg></button>
+    </form>
+  </aside>
+
+  <!-- Модалка входа и регистрации (Премиальный симметричный дизайн) -->
+  <div class="overlay overlay--auth" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title"
+    hidden>
+    <div class="auth-card">
+      <button class="auth-card__close" type="button" data-close-auth data-i18n-attr="aria-label:sheet.close"
+        title="Закрыть">
+        <svg>
+          <use href="#i-close" />
+        </svg>
+      </button>
+
+      <!-- Шапка карточки: логотип и заголовок -->
+      <div class="auth-card__head">
+        <div class="auth-card__brand">
+          <img src="/assets/img/logo.png" alt="ArzonOL" class="auth-card__logo-img">
+          <span class="auth-card__brand-name">Arzon<span class="brand-green">OL</span></span>
+        </div>
+        <h2 class="auth-card__title" id="auth-title"></h2>
+        <p class="auth-card__subtitle" id="auth-subtitle"></p>
+      </div>
+
+      <!-- Симметричные вкладки переключения режима -->
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab is-active" type="button" id="tab-auth-login" data-auth="login"
+          data-i18n="auth.login">Войти</button>
+        <button class="auth-tab" type="button" id="tab-auth-register" data-auth="register"
+          data-i18n="auth.register">Регистрация</button>
+      </div>
+
+      <form class="auth-card__form" id="auth-form" autocomplete="on">
+        <!-- Имя (для регистрации) -->
+        <div class="auth-field" id="auth-name-row" hidden>
+          <label class="auth-field__label" for="auth-name" data-i18n="auth.nameLabel">Имя</label>
+          <div class="auth-field__wrap">
+            <svg class="auth-field__icon">
+              <use href="#i-user" />
+            </svg>
+            <input class="auth-field__input" id="auth-name" type="text" autocomplete="name" maxlength="80"
+              placeholder="Алишер">
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div class="auth-field">
+          <label class="auth-field__label" for="auth-email" data-i18n="auth.emailLabel">Email</label>
+          <div class="auth-field__wrap">
+            <svg class="auth-field__icon">
+              <use href="#i-mail" />
+            </svg>
+            <input class="auth-field__input" id="auth-email" type="email" required autocomplete="email"
+              placeholder="name@example.com">
+          </div>
+        </div>
+
+        <!-- Пароль -->
+        <div class="auth-field">
+          <label class="auth-field__label" for="auth-password" data-i18n="auth.passwordLabel">Пароль</label>
+          <div class="auth-field__wrap">
+            <svg class="auth-field__icon">
+              <use href="#i-lock" />
+            </svg>
+            <input class="auth-field__input" id="auth-password" type="password" required minlength="6"
+              autocomplete="current-password" placeholder="••••••••">
+            <button class="auth-field__eye" type="button" id="toggle-auth-pw" aria-label="Показать пароль">
+              <svg>
+                <use href="#i-eye" />
+              </svg>
             </button>
           </div>
         </div>
 
-        <!-- Навигационные вкладки кабинета -->
-        <div class="cabinet__tabs" role="tablist">
-          <button class="cab-tab is-active" type="button" data-tab="tracked">
-            <svg><use href="#i-heart"/></svg>
-            <span data-i18n="cabinet.tabTracked">Отслеживаемые</span>
-          </button>
-          <button class="cab-tab" type="button" data-tab="activity">
-            <svg><use href="#i-chart"/></svg>
-            <span data-i18n="cabinet.tabActivity">История</span>
-          </button>
-          <button class="cab-tab" type="button" data-tab="settings">
-            <svg><use href="#i-user"/></svg>
-            <span data-i18n="cabinet.tabSettings">Настройки</span>
-          </button>
-        </div>
+        <!-- Сообщение об ошибке -->
+        <div class="auth-card__error" id="auth-error" hidden role="alert"></div>
 
-        <!-- Вкладка 1: Отслеживаемые товары -->
-        <div class="cabinet__pane" id="pane-tracked">
-          <div class="cabinet__list" id="cabinet-list"></div>
-        </div>
-
-        <!-- Вкладка 2: История просмотров и запросов -->
-        <div class="cabinet__pane" id="pane-activity" hidden>
-          <div class="cab-cols">
-            <div class="cab-card">
-              <h3 class="cab-sub" data-i18n="cabinet.recentViews"></h3>
-              <div id="cabinet-viewed"></div>
-            </div>
-            <div class="cab-card">
-              <h3 class="cab-sub" data-i18n="cabinet.recentSearches"></h3>
-              <div id="cabinet-searches"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Вкладка 3: Настройки аккаунта и смена пароля -->
-        <div class="cabinet__pane" id="pane-settings" hidden>
-          <div class="cab-cols">
-            <form class="cab-form cab-card" id="profile-form">
-              <h3 class="cab-sub" data-i18n="cabinet.myData"></h3>
-              <div class="form-row">
-                <label class="form-label" for="prof-name" data-i18n="auth.nameLabel"></label>
-                <input class="form-input" id="prof-name" type="text" maxlength="80">
-              </div>
-              <div class="form-row">
-                <label class="form-label" for="prof-region" data-i18n="cabinet.region"></label>
-                <div class="select-wrap">
-                  <select class="select" id="prof-region"></select>
-                  <svg class="select-arrow"><use href="#i-chevron-down"/></svg>
-                </div>
-              </div>
-              <p class="cab-msg" id="profile-msg" hidden></p>
-              <button class="btn btn--primary" type="submit" data-i18n="cabinet.save"></button>
-            </form>
-
-            <form class="cab-form cab-card" id="password-form">
-              <h3 class="cab-sub" data-i18n="cabinet.changePassword"></h3>
-              <div class="form-row">
-                <label class="form-label" for="pw-current" data-i18n="cabinet.currentPassword"></label>
-                <input class="form-input" id="pw-current" type="password" required autocomplete="current-password">
-              </div>
-              <div class="form-row">
-                <label class="form-label" for="pw-new" data-i18n="cabinet.newPassword"></label>
-                <input class="form-input" id="pw-new" type="password" required minlength="6" autocomplete="new-password">
-              </div>
-              <p class="cab-msg" id="password-msg" hidden></p>
-              <button class="btn btn--ghost" type="submit" data-i18n="cabinet.save"></button>
-            </form>
-          </div>
-        </div>
-      </section>
-
-      <!-- Сработавшие цели по цене -->
-      <div class="notif" id="notifications" hidden></div>
-
-      <!-- Три категории: точка входа в каталог -->
-      <section class="cats" id="cats" aria-labelledby="cats-title">
-        <div class="cats__head">
-          <h2 class="cats__title" id="cats-title" data-i18n="cats.title"></h2>
-          <p class="cats__sub" data-i18n="cats.sub"></p>
-        </div>
-        <div class="cats__grid" id="cats-grid"></div>
-      </section>
-
-      <!-- Ленты по категориям + самые популярные с выгодой -->
-      <div class="sections" id="sections"></div>
-    </div>
-
-    <!-- Маркетплейсы и бренды: светлая полоса во всю ширину -->
-    <section class="partners" id="partners" aria-labelledby="partners-title">
-      <div class="page">
-        <div class="partners__head">
-          <div class="partners__badge">
-            <span data-i18n="partners.badge">⚡ 8 маркетплейсов · 120+ брендов</span>
-          </div>
-          <h2 class="partners__title" id="partners-title" data-i18n="partners.title"></h2>
-          <p class="partners__sub" data-i18n="partners.sub"></p>
-        </div>
-      </div>
-      <div class="partners__viewport">
-        <div class="partners__track" id="partners-track"></div>
-      </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <div class="footer__inner">
-        <div>
-          <div class="footer__mark">
-            <img src="/assets/img/logo.png" alt="ArzonOL" class="footer__logo-img">
-            <span>Arzon<span class="brand-green">OL</span></span>
-          </div>
-          <p class="footer__blurb" data-i18n="footer.blurb"></p>
-        </div>
-        <div class="footer__col">
-          <h3 data-i18n="footer.shop"></h3>
-          <ul>
-            <li><a href="#" data-i18n="footer.link.selections"></a></li>
-            <li><a href="#" data-i18n="footer.link.brands"></a></li>
-            <li><a href="#" data-i18n="footer.link.new"></a></li>
-            <li><a href="#" data-i18n="footer.link.sale"></a></li>
-          </ul>
-        </div>
-        <div class="footer__col">
-          <h3 data-i18n="footer.help"></h3>
-          <ul>
-            <li><a href="#" data-i18n="footer.link.delivery"></a></li>
-            <li><a href="#" data-i18n="footer.link.returns"></a></li>
-            <li><a href="#" data-i18n="footer.link.tracking"></a></li>
-            <li><a href="#" data-i18n="footer.link.support"></a></li>
-          </ul>
-        </div>
-        <div class="footer__col">
-          <h3 data-i18n="footer.company"></h3>
-          <ul>
-            <li><a href="#" data-i18n="footer.link.about"></a></li>
-            <li><a href="#" data-i18n="footer.link.jobs"></a></li>
-            <li><a href="#" data-i18n="footer.link.press"></a></li>
-            <li><a href="#" data-i18n="footer.link.partners"></a></li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- Юридический дисклеймер агрегатора -->
-      <div class="footer__disclaimer-box">
-        <p class="footer__disclaimer-text" data-i18n="footer.disclaimer"></p>
-      </div>
-
-      <div class="footer__base">
-        <span>© 2026 ArzonOL — <span data-i18n="footer.tagline"></span></span>
-        <span data-i18n="footer.legal"></span>
-      </div>
-    </footer>
-
-  </main>
-</div>
-
-<!-- Модалка товара: блок сравнения цен на маркетплейсах -->
-<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="sheet-brand" hidden>
-  <div class="sheet" id="sheet">
-    <button class="sheet__close" type="button" data-close-sheet data-i18n-attr="aria-label:sheet.close"><svg><use href="#i-close"/></svg></button>
-    <div class="sheet__media">
-      <img id="sheet-image" src="" alt="">
-      <div class="sheet__thumbs" id="sheet-thumbs"></div>
-
-      <!-- График истории цен -->
-      <div class="sheet__chart-box" id="sheet-chart-box">
-        <div class="sheet__chart-header">
-          <div class="sheet__chart-title-wrap">
-            <svg class="sheet__chart-icon"><use href="#i-chart"/></svg>
-            <span class="sheet__chart-title" data-i18n="chart.title"></span>
-          </div>
-          <span class="sheet__trend-badge" id="sheet-trend-badge"></span>
-        </div>
-        <div class="sheet__chart-canvas" id="sheet-chart"></div>
-      </div>
-    </div>
-
-    <div class="sheet__body">
-      <div class="sheet__header">
-        <h2 class="sheet__brand" id="sheet-brand"></h2>
-        <p class="sheet__title" id="sheet-title"></p>
-        <div class="sheet__rating" id="sheet-rating"></div>
-      </div>
-
-      <div class="sheet__price-panel">
-        <div class="sheet__price" id="sheet-price"></div>
-        <div class="sheet__savings-badge" id="sheet-savings"></div>
-      </div>
-
-      <!-- ИИ-советник по цене -->
-      <div class="sheet__ai-advisor" id="sheet-ai-advisor" hidden></div>
-
-      <p class="sheet__desc" id="sheet-desc"></p>
-
-      <!-- ИИ-саммари отзывов покупателей (Плюсы и Минусы) -->
-      <div class="sheet__ai-reviews" id="sheet-ai-reviews" hidden></div>
-
-      <div class="sheet__offers-section">
-        <div class="sheet__offers-heading" data-i18n="sheet.offersTitle"></div>
-
-        <!-- Список предложений + гейт поверх него для незарегистрированных -->
-        <div class="offers-wrap">
-          <div class="sheet__offers-table" id="sheet-offers"></div>
-
-          <div class="offers-gate" id="offers-gate" hidden>
-            <div class="offers-gate__card">
-              <svg class="offers-gate__icon"><use href="#i-chart"/></svg>
-              <p class="offers-gate__title" data-i18n="gate.title"></p>
-              <p class="offers-gate__text" data-i18n="gate.text"></p>
-              <div class="offers-gate__actions">
-                <button class="btn btn--primary" type="button" data-auth="register" data-i18n="auth.register"></button>
-                <button class="btn btn--ghost" type="button" data-auth="login" data-i18n="auth.login"></button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <p class="sheet__disclaimer" data-i18n="sheet.disclaimer"></p>
-      </div>
-
-      <div class="sheet__actions">
-        <button class="btn btn--primary" type="button" id="sheet-compare">
-          <svg><use href="#i-compare"/></svg>
-          <span id="sheet-compare-label" data-i18n="sheet.compareAdd"></span>
+        <!-- Основная кнопка отправки -->
+        <button class="auth-card__submit" type="submit" id="auth-submit">
+          <span id="auth-submit-label"></span>
+          <svg class="auth-card__submit-arrow">
+            <use href="#i-arrow-right" />
+          </svg>
         </button>
-        <button class="btn btn--ghost" type="button" id="sheet-alert-btn" data-i18n-attr="title:alert.btn,aria-label:alert.btn">
-          <svg><use href="#i-bell"/></svg>
-        </button>
-        <button class="btn btn--ghost" type="button" id="sheet-fav" data-i18n-attr="title:sheet.trackPrice,aria-label:sheet.trackPrice">
-          <svg><use href="#i-heart"/></svg>
+
+        <!-- Подсказка переключения -->
+        <p class="auth-card__switch" id="auth-switch"></p>
+
+        <!-- Безопасность / Правовая информация -->
+        <div class="auth-card__security">
+          <svg>
+            <use href="#i-shield" />
+          </svg>
+          <span data-i18n="auth.secureNote">Защищено шифрованием scrypt</span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Модальное окно / Drawer: мобильный каталог категорий -->
+  <div class="overlay overlay--catalog" id="catalog-modal" role="dialog" aria-modal="true"
+    aria-labelledby="catalog-modal-title" hidden>
+    <div class="catalog-drawer">
+      <div class="catalog-drawer__head">
+        <div class="catalog-drawer__title-wrap">
+          <svg class="catalog-drawer__icon">
+            <use href="#i-grid" />
+          </svg>
+          <h2 class="catalog-drawer__title" id="catalog-modal-title" data-i18n="nav.catalog"></h2>
+        </div>
+        <button class="catalog-drawer__close" type="button" data-close-catalog data-i18n-attr="aria-label:sheet.close">
+          <svg>
+            <use href="#i-close" />
+          </svg>
         </button>
       </div>
+      <div class="catalog-drawer__list" id="catalog-drawer-list"></div>
     </div>
   </div>
-</div>
 
-<!-- Модалка: подписка на снижение цены -->
-<div class="overlay overlay--alert" id="alert-modal" role="dialog" aria-modal="true" aria-labelledby="alert-modal-title" hidden>
-  <div class="alert-box">
-    <button class="alert-box__close" type="button" data-close-alert data-i18n-attr="aria-label:sheet.close"><svg><use href="#i-close"/></svg></button>
-    <div class="alert-box__head">
-      <div class="alert-box__icon"><svg><use href="#i-bell"/></svg></div>
-      <h2 class="alert-box__title" id="alert-modal-title" data-i18n="alert.title"></h2>
-      <p class="alert-box__subtitle" data-i18n="alert.subtitle"></p>
-    </div>
-    <form class="alert-box__form" id="alert-form">
-      <div class="form-group">
-        <label class="form-label" for="alert-target-price" data-i18n="alert.targetLabel"></label>
-        <input class="form-input" id="alert-target-price" type="number" required>
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="alert-contact" data-i18n="alert.contactLabel"></label>
-        <input class="form-input" id="alert-contact" type="text" placeholder="@username или name@mail.uz" required>
-      </div>
-      <button class="btn btn--primary alert-box__submit" type="submit" data-i18n="alert.submit"></button>
-    </form>
+  <!-- Показывается, если каталог не загрузился: пустой экран без объяснения хуже -->
+  <div class="boot-error" id="boot-error" hidden>
+    <p data-i18n="boot.error"></p>
+    <code id="boot-error-detail"></code>
+    <p data-i18n="boot.hint"></p>
   </div>
-</div>
 
-<!-- Выдвижная панель: список сравнения -->
-<div class="scrim" id="scrim"></div>
-<aside class="drawer" id="drawer" data-i18n-attr="aria-label:compare.drawerTitle" aria-hidden="true">
-  <div class="drawer__head">
-    <div class="drawer__title-wrap">
-      <svg class="drawer__title-icon"><use href="#i-compare"/></svg>
-      <h2 class="drawer__title" data-i18n="compare.drawerTitle"></h2>
-    </div>
-    <button class="drawer__close" type="button" data-close-compare data-i18n-attr="aria-label:sheet.close"><svg><use href="#i-close"/></svg></button>
-  </div>
-  <div class="drawer__list" id="compare-list"></div>
-  
-  <!-- Калькулятор общей экономии комплекта -->
-  <div class="drawer__bundle-summary" id="drawer-bundle"></div>
-
-  <div class="drawer__foot">
-    <button class="btn btn--primary" type="button" id="open-compare-modal" data-i18n="compare.openModal"></button>
-    <button class="btn btn--ghost btn--clear" type="button" id="clear-compare" data-i18n="compare.clear"></button>
-  </div>
-</aside>
-
-<!-- Модальное окно: подробная таблица сравнения товаров -->
-<div class="overlay overlay--compare" id="compare-modal" role="dialog" aria-modal="true" aria-labelledby="compare-modal-title" hidden>
-  <div class="compare-modal">
-    <div class="compare-modal__head">
-      <div class="compare-modal__title-wrap">
-        <svg class="compare-modal__title-icon"><use href="#i-compare"/></svg>
-        <h2 class="compare-modal__title" id="compare-modal-title" data-i18n="compare.modalTitle"></h2>
-      </div>
-      <button class="compare-modal__close" type="button" data-close-compare-modal data-i18n-attr="aria-label:sheet.close"><svg><use href="#i-close"/></svg></button>
-    </div>
-    <div class="compare-modal__body" id="compare-table-container"></div>
-  </div>
-</div>
-
-<!-- Модальное окно: ИИ-сборщик комплектов под бюджет -->
-<div class="overlay overlay--bundle" id="bundle-modal" role="dialog" aria-modal="true" aria-labelledby="bundle-modal-title" hidden>
-  <div class="bundle-modal">
-    <button class="bundle-modal__close" type="button" data-close-bundle-modal data-i18n-attr="aria-label:sheet.close"><svg><use href="#i-close"/></svg></button>
-    
-    <div class="bundle-modal__head">
-      <div class="bundle-modal__badge">
-        <svg><use href="#i-spark"/></svg>
-        <span data-i18n="ai.bundleBuilder"></span>
-      </div>
-      <h2 class="bundle-modal__title" id="bundle-modal-title" data-i18n="ai.bundleTitle"></h2>
-      <p class="bundle-modal__subtitle" data-i18n="ai.bundleSubtitle"></p>
-    </div>
-
-    <form class="bundle-modal__form" id="bundle-form">
-      <div class="bundle-modal__row">
-        <div class="bundle-modal__field bundle-modal__field--query">
-          <label class="form-label" for="bundle-query-input" data-i18n="ai.bundleQuery"></label>
-          <input class="form-input" id="bundle-query-input" type="text" required placeholder="Например: Техника для кухни или Ремонт спальни">
-        </div>
-        <div class="bundle-modal__field bundle-modal__field--budget">
-          <label class="form-label" for="bundle-budget-input" data-i18n="ai.bundleBudget"></label>
-          <input class="form-input" id="bundle-budget-input" type="number" step="500000" min="500000" placeholder="10 000 000">
-        </div>
-      </div>
-
-      <!-- Быстрые пресеты -->
-      <div class="bundle-presets" id="bundle-presets">
-        <button type="button" class="bundle-chip" data-query="Техника для кухни" data-budget="15000000">🍳 Техника для кухни (15 млн)</button>
-        <button type="button" class="bundle-chip" data-query="Ремонт спальни ламинат обои" data-budget="8000000">🛏️ Ремонт спальни (8 млн)</button>
-        <button type="button" class="bundle-chip" data-query="Мебель для гостиной диван" data-budget="12000000">🛋️ Гостиная под ключ (12 млн)</button>
-      </div>
-
-      <button class="btn btn--primary bundle-modal__submit" type="submit" id="bundle-submit-btn">
-        <svg><use href="#i-spark"/></svg>
-        <span data-i18n="ai.bundleSubmit"></span>
-      </button>
-    </form>
-
-    <div class="bundle-results" id="bundle-results" hidden></div>
-  </div>
-</div>
-
-<!-- Cookie consent -->
-<div class="cookie" id="cookie" hidden>
-  <p class="cookie__text">
-    <span data-i18n="cookie.text"></span> <a href="#" data-i18n="cookie.link"></a>.
-  </p>
-  <div class="cookie__actions">
-    <button class="cookie__btn" type="button" data-cookie="reject" data-i18n="cookie.reject"></button>
-    <button class="cookie__btn" type="button" data-cookie="accept" data-i18n="cookie.accept"></button>
-  </div>
-</div>
-
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-<!-- ArzonOL AI: faqat katalog va xarid tanlovi bo'yicha maslahatchi -->
-<button class="ai-fab" id="ai-assistant-toggle" type="button" aria-controls="ai-assistant" aria-expanded="false">
-  <span class="ai-fab__ring" aria-hidden="true"></span>
-  <span class="ai-fab__glyph" aria-hidden="true">
-    <svg class="ai-fab__spark"><use href="#i-spark"/></svg>
-    <svg class="ai-fab__close"><use href="#i-close"/></svg>
-  </span>
-  <span class="ai-fab__hint" id="ai-fab-hint">Sizga nima yordam kerak?</span>
-</button>
-
-<aside class="ai-assistant" id="ai-assistant" role="dialog" aria-label="ArzonOL AI maslahatchisi" aria-hidden="true">
-  <header class="ai-assistant__head">
-    <span class="ai-assistant__avatar" aria-hidden="true"><svg><use href="#i-spark"/></svg></span>
-    <div class="ai-assistant__id">
-      <strong id="ai-assistant-title">ArzonOL AI</strong>
-      <span class="ai-assistant__status" id="ai-assistant-status">Xarid maslahatchisi</span>
-    </div>
-    <button class="ai-assistant__act" id="ai-assistant-reset" type="button" aria-label="Suhbatni tozalash"><svg><use href="#i-trash"/></svg></button>
-    <button class="ai-assistant__act" id="ai-assistant-close" type="button" aria-label="Yopish"><svg><use href="#i-close"/></svg></button>
-  </header>
-
-  <div class="ai-context" id="ai-assistant-context" hidden></div>
-
-  <div class="ai-assistant__messages" id="ai-assistant-messages" aria-live="polite"></div>
-
-  <div class="ai-assistant__prompts" id="ai-assistant-prompts"></div>
-
-  <form class="ai-assistant__form" id="ai-assistant-form">
-    <label class="sr-only" for="ai-assistant-input">ArzonOL AI ga savol</label>
-    <input id="ai-assistant-input" type="text" maxlength="500" autocomplete="off" placeholder="Masalan: Samsung qayerda arzon?">
-    <button class="ai-assistant__send" type="submit" aria-label="Yuborish"><svg><use href="#i-arrow-right"/></svg></button>
-  </form>
-</aside>
-
-<!-- Модалка входа и регистрации (Премиальный симметричный дизайн) -->
-<div class="overlay overlay--auth" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title" hidden>
-  <div class="auth-card">
-    <button class="auth-card__close" type="button" data-close-auth data-i18n-attr="aria-label:sheet.close" title="Закрыть">
-      <svg><use href="#i-close"/></svg>
-    </button>
-    
-    <!-- Шапка карточки: логотип и заголовок -->
-    <div class="auth-card__head">
-      <div class="auth-card__brand">
-        <img src="/assets/img/logo.png" alt="ArzonOL" class="auth-card__logo-img">
-        <span class="auth-card__brand-name">Arzon<span class="brand-green">OL</span></span>
-      </div>
-      <h2 class="auth-card__title" id="auth-title"></h2>
-      <p class="auth-card__subtitle" id="auth-subtitle"></p>
-    </div>
-
-    <!-- Симметричные вкладки переключения режима -->
-    <div class="auth-tabs" role="tablist">
-      <button class="auth-tab is-active" type="button" id="tab-auth-login" data-auth="login" data-i18n="auth.login">Войти</button>
-      <button class="auth-tab" type="button" id="tab-auth-register" data-auth="register" data-i18n="auth.register">Регистрация</button>
-    </div>
-
-    <form class="auth-card__form" id="auth-form" autocomplete="on">
-      <!-- Имя (для регистрации) -->
-      <div class="auth-field" id="auth-name-row" hidden>
-        <label class="auth-field__label" for="auth-name" data-i18n="auth.nameLabel">Имя</label>
-        <div class="auth-field__wrap">
-          <svg class="auth-field__icon"><use href="#i-user"/></svg>
-          <input class="auth-field__input" id="auth-name" type="text" autocomplete="name" maxlength="80" placeholder="Алишер">
-        </div>
-      </div>
-
-      <!-- Email -->
-      <div class="auth-field">
-        <label class="auth-field__label" for="auth-email" data-i18n="auth.emailLabel">Email</label>
-        <div class="auth-field__wrap">
-          <svg class="auth-field__icon"><use href="#i-mail"/></svg>
-          <input class="auth-field__input" id="auth-email" type="email" required autocomplete="email" placeholder="name@example.com">
-        </div>
-      </div>
-
-      <!-- Пароль -->
-      <div class="auth-field">
-        <label class="auth-field__label" for="auth-password" data-i18n="auth.passwordLabel">Пароль</label>
-        <div class="auth-field__wrap">
-          <svg class="auth-field__icon"><use href="#i-lock"/></svg>
-          <input class="auth-field__input" id="auth-password" type="password" required minlength="6" autocomplete="current-password" placeholder="••••••••">
-          <button class="auth-field__eye" type="button" id="toggle-auth-pw" aria-label="Показать пароль">
-            <svg><use href="#i-eye"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Сообщение об ошибке -->
-      <div class="auth-card__error" id="auth-error" hidden role="alert"></div>
-
-      <!-- Основная кнопка отправки -->
-      <button class="auth-card__submit" type="submit" id="auth-submit">
-        <span id="auth-submit-label"></span>
-        <svg class="auth-card__submit-arrow"><use href="#i-arrow-right"/></svg>
-      </button>
-
-      <!-- Подсказка переключения -->
-      <p class="auth-card__switch" id="auth-switch"></p>
-
-      <!-- Безопасность / Правовая информация -->
-      <div class="auth-card__security">
-        <svg><use href="#i-shield"/></svg>
-        <span data-i18n="auth.secureNote">Защищено шифрованием scrypt</span>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Показывается, если каталог не загрузился: пустой экран без объяснения хуже -->
-<div class="boot-error" id="boot-error" hidden>
-  <p data-i18n="boot.error"></p>
-  <code id="boot-error-detail"></code>
-  <p data-i18n="boot.hint"></p>
-</div>
-
-<script src="/assets/js/i18n.js"></script>
-<script src="/assets/js/data.js"></script>
-<script src="/assets/js/app.js"></script>
+  <script src="/assets/js/i18n.js"></script>
+  <script src="/assets/js/data.js"></script>
+  <script src="/assets/js/app.js"></script>
 </body>
+
 </html>

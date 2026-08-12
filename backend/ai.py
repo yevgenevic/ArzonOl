@@ -16,33 +16,43 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-ENV_PATH = Path(__file__).resolve().parent / ".env"
+ENV_PATHS = [
+    Path(__file__).resolve().parent / ".env",
+    Path(__file__).resolve().parent.parent / ".env",
+]
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# Бесплатная модель OpenRouter. Список бесплатных моделей меняется: если
-# модель уедет на платный тариф, OpenRouter вернёт 404 с именем замены.
-# Другую модель ставят через OPENROUTER_MODEL в .env, слаг openrouter/free
-# выбирает бесплатную модель автоматически.
-DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
+# По умолчанию используем openrouter/free или gemini, так как старые модели устаревают
+DEFAULT_MODEL = "openrouter/free"
 
 MAX_CONTEXT_PRODUCTS = 6
 HISTORY_LIMIT = 6          # пар «вопрос-ответ» из клиента принимаем не больше
-RATE_LIMIT = 20            # запросов с одного IP
+RATE_LIMIT = 100           # запросов с одного IP (увеличено для бесперебойной работы виджетов)
 RATE_WINDOW = 600          # за 10 минут
 
 LANG_NAMES = {"ru": "Russian", "uz": "Uzbek (latin script)", "en": "English"}
 
+# Служебные слова запроса: без них "ofis uchun stul" совпадало с
+# "Oshxona uchun xrom jo'mrak" по предлогу и кран попадал в комплект.
+STOPWORDS = {
+    "для", "под", "нужен", "нужна", "нужно", "нужны", "хочу", "мне", "это",
+    "или", "все", "весь", "вся", "чтобы", "надо",
+    "uchun", "kerak", "menga", "bor", "yoki", "hamma", "boshqa",
+    "the", "for", "and", "need", "want", "with", "some", "all",
+}
+
 
 def _load_env() -> None:
-    """Читает backend/.env. python-dotenv ради пяти строк не нужен."""
-    if not ENV_PATH.exists():
-        return
-    for line in ENV_PATH.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+    """Читает .env из backend/ или корня проекта."""
+    for p in ENV_PATHS:
+        if p.exists():
+            for line in p.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                os.environ[key.strip()] = value.strip().strip('"').strip("'")
+            break
 
 
 _load_env()
@@ -405,7 +415,8 @@ def _parse_json_reply(text: str) -> dict | list | None:
 # 1. ИИ-вердикт в блоке «Сравнение товаров»
 # ==============================================================================
 
-def generate_comparison_verdict(db, product_ids: list[str], lang: str = "ru") -> dict:
+def generate_comparison_verdict(db, product_ids: list[str], lang: str = "ru",
+                                unlocked: bool = False) -> dict:
     """Генерирует структурированный вердикт сравнения товаров:
     - Ключевые отличия
     - Кому какой товар лучше подойдет
@@ -430,16 +441,19 @@ def generate_comparison_verdict(db, product_ids: list[str], lang: str = "ru") ->
         max_p = max(prices) if prices else None
         title = p.get(f"title_{lang_code}") or p.get("title_ru") or p.get("title_uz") or ""
         
-        products_desc.append({
+        desc = {
             "id": p["id"],
             "title": title,
             "brand": p["brand"],
             "rating": p.get("rating", 4.5),
             "reviews": p.get("reviews", 0),
-            "min_price": _money(min_p) if min_p else "N/A",
-            "max_price": _money(max_p) if max_p else "N/A",
             "platforms": [o["platform"] for o in offers],
-        })
+        }
+        # цены — только вошедшим, как и в /api/products
+        if unlocked:
+            desc["min_price"] = _money(min_p) if min_p else "N/A"
+            desc["max_price"] = _money(max_p) if max_p else "N/A"
+        products_desc.append(desc)
 
     sys_prompt = (
         f"You are an expert e-commerce buying advisor for ArzonOL aggregator in Uzbekistan. "
@@ -455,6 +469,8 @@ def generate_comparison_verdict(db, product_ids: list[str], lang: str = "ru") ->
         f"}}\n"
         f"Be concise, practical and objective. No markdown wrapping outside JSON."
     )
+    if not unlocked:
+        sys_prompt += "\nPrices are unavailable: never mention any price, sum or number in your answer."
 
     user_msg = f"Compare these {len(products_desc)} products:\n" + json.dumps(products_desc, ensure_ascii=False, indent=2)
 
@@ -644,73 +660,95 @@ def generate_reviews_summary(db, product_id: str, lang: str = "ru") -> dict:
     reviews_count = p.get("reviews", 50)
     sold_count = p.get("sold", 100)
 
+    # Отзывов покупателей в базе нет, поэтому выдавать текст за их мнение нельзя.
+    # Модель описывает класс товара, а не притворяется, что читала отзывы.
     sys_prompt = (
         f"You are an objective electronics & home goods product analyst for ArzonOL in Uzbekistan. "
-        f"Generate a realistic, helpful customer feedback summary for the specified product based on its brand, "
-        f"category, rating ({rating}/5.0 from {reviews_count} reviews, {sold_count} sold).\n"
+        f"Describe what a buyer should expect from this CLASS of product, based on its category, "
+        f"brand tier and catalogue rating ({rating}/5.0).\n"
+        f"Strict rules:\n"
+        f"- You have NO access to customer reviews. Never claim buyers said, reported or complained about anything.\n"
+        f"- Never invent specific defects, measurements, or usage statistics.\n"
+        f"- Write about typical characteristics and what to check before buying.\n"
         f"Respond ONLY with a JSON object in {lang_name} language without markdown fences:\n"
         f"{{\n"
-        f'  "pros": ["Top advantage 1", "Top advantage 2", "Top advantage 3"],\n'
-        f'  "cons": ["Minor drawback 1", "Minor drawback 2"],\n'
-        f'  "verdict": "One clear concluding sentence on user satisfaction and real-world durability",\n'
-        f'  "satisfaction": 94\n'
+        f'  "pros": ["Typical strength 1", "Typical strength 2", "Typical strength 3"],\n'
+        f'  "cons": ["What to check 1", "What to check 2"],\n'
+        f'  "verdict": "One neutral concluding sentence about this product class"\n'
         f"}}\n"
-        f"Points should be practical, concise (max 8 words each), realistic for this product tier."
+        f"Points should be practical and concise (max 8 words each)."
     )
 
-    user_msg = f"Product: {brand} - {title}\nRating: {rating}/5.0\nReviews: {reviews_count}"
+    user_msg = f"Product: {brand} - {title}\nCatalogue rating: {rating}/5.0"
+
+    # Отдаём фактический рейтинг каталога. Раньше здесь был процент «довольных
+    # покупателей» от модели — статистика, которой у нас просто нет.
+    satisfaction = min(98, max(75, int(rating * 20)))
 
     try:
         raw = ask([{"role": "system", "content": sys_prompt}, {"role": "user", "content": user_msg}], max_tokens=450)
         parsed = _parse_json_reply(raw)
         if isinstance(parsed, dict) and "pros" in parsed and "cons" in parsed:
+            parsed["satisfaction"] = satisfaction
+            parsed["rating"] = rating
+            parsed["reviews"] = reviews_count
+            parsed["generated"] = True
             return parsed
     except Exception:
         pass
 
-    # Качественный фоллбек
-    satisfaction = min(98, max(75, int(rating * 20)))
+    # Фоллбек. Формулировки опираются на рейтинг каталога и не приписывают
+    # покупателям слов, которых мы не собирали.
     if lang_code == "uz":
         return {
             "pros": [
-                f"{brand} dan ishonchli yig'ilish sifati",
-                "O'z toifasida qulay narx va tejamkorlik",
-                "Foydalanish qulayligi va zamonaviy dizayn"
+                f"{brand} — o'z toifasida tanilgan brend",
+                "Narx va imkoniyatlar nisbati muvozanatli",
+                "Kundalik foydalanish uchun mos",
             ],
             "cons": [
-                "Yetkazib berish vaqtida qadoq holatini tekshirish lozim",
-                "Komplektatsiyada qo'shimcha aksessuarlar cheklangan bo'lishi mumkin"
+                "Yetkazib berishda qadoqni tekshiring",
+                "Komplektatsiyani sotuvchida aniqlashtiring",
             ],
-            "verdict": f"{satisfaction}% xaridorlar ushbu modelni tavsiya qilgan va sifatidan to'liq mamnun.",
-            "satisfaction": satisfaction
+            "verdict": f"Katalog reytingi {rating}/5.0 — o'z sinfidagi barqaror model.",
+            "satisfaction": satisfaction,
+            "rating": rating,
+            "reviews": reviews_count,
+            "generated": True,
         }
     elif lang_code == "en":
         return {
             "pros": [
-                f"Solid build quality from {brand}",
-                "Great price-to-performance ratio",
-                "Intuitive controls and ergonomic design"
+                f"{brand} is an established brand in its tier",
+                "Balanced price-to-features ratio",
+                "Suitable for everyday use",
             ],
             "cons": [
-                "Packaging should be inspected upon delivery",
-                "Basic starter accessories in the box"
+                "Inspect the packaging on delivery",
+                "Confirm the exact bundle with the seller",
             ],
-            "verdict": f"{satisfaction}% of verified buyers recommend this product for everyday use.",
-            "satisfaction": satisfaction
+            "verdict": f"Catalogue rating {rating}/5.0 — a solid option in its class.",
+            "satisfaction": satisfaction,
+            "rating": rating,
+            "reviews": reviews_count,
+            "generated": True,
         }
     else:
         return {
             "pros": [
-                f"Надёжная сборка и материалы от {brand}",
-                "Отличное соотношение цены и возможностей",
-                "Удобство в повседневном использовании"
+                f"{brand} — известный бренд в своём сегменте",
+                "Сбалансированное соотношение цены и возможностей",
+                "Подходит для повседневного использования",
             ],
             "cons": [
-                "Базовая комплектация без лишних аксессуаров",
-                "Требует аккуратности при транспортировке"
+                "Проверьте упаковку при доставке",
+                "Уточните комплектацию у продавца",
             ],
-            "verdict": f"{satisfaction}% покупателей довольны выбором и рекомендуют модель к покупке.",
-            "satisfaction": satisfaction
+            "verdict": f"Рейтинг каталога {rating}/5.0 — устойчивый вариант в своём классе.",
+            "satisfaction": satisfaction,
+            "rating": rating,
+            "reviews": reviews_count,
+            "generated": True,
         }
 
 
@@ -718,7 +756,8 @@ def generate_reviews_summary(db, product_id: str, lang: str = "ru") -> dict:
 # 4. ИИ-сборщик комплектов под бюджет («Собери мне всё для...»)
 # ==============================================================================
 
-def generate_bundle(db, query: str, budget: int | None = None, category_id: str | None = None, lang: str = "ru") -> dict:
+def generate_bundle(db, query: str, budget: int | None = None, category_id: str | None = None,
+                    lang: str = "ru", unlocked: bool = False) -> dict:
     """Подбирает оптимальный набор взаимодополняющих товаров из каталога под бюджет пользователя:
     - bundle_title: название набора
     - items: список товаров с выбранными лучшими ценами
@@ -749,11 +788,18 @@ def generate_bundle(db, query: str, budget: int | None = None, category_id: str 
         if not min_off:
             continue
         title = r.get(f"title_{lang_code}") or r.get("title_ru") or r.get("title_uz") or ""
+        # запрос может быть на любом языке независимо от языка интерфейса,
+        # поэтому релевантность считаем по названиям на всех языках сразу
+        search_text = " ".join(filter(None, [
+            r.get("title_ru"), r.get("title_uz"), r.get("title_en"),
+            r["brand"], r["category_id"],
+        ])).lower()
         catalog_items.append({
             "id": pid,
             "cat": r["category_id"],
             "brand": r["brand"],
             "title": title,
+            "search_text": search_text,
             "price": min_off["price"],
             "max_price": product_max_offers.get(pid, min_off["price"]),
             "image": r["image"],
@@ -762,50 +808,93 @@ def generate_bundle(db, query: str, budget: int | None = None, category_id: str 
         })
 
     # Фильтруем / ранжируем товары по релевантности запросу
-    q_words = [w.lower() for w in re.findall(r"\w+", query) if len(w) > 2]
-    
+    q_words = [w.lower() for w in re.findall(r"\w+", query)
+               if len(w) > 2 and w.lower() not in STOPWORDS]
+
     def score_item(item):
         score = 0
         if category_id and item["cat"] == category_id:
             score += 10
-        text = f"{item['brand']} {item['title']} {item['cat']}".lower()
         for w in q_words:
-            if w in text:
+            if w in item["search_text"]:
                 score += 5
         return score
 
-    scored = sorted(catalog_items, key=score_item, reverse=True)
+    # берём только товары, реально связанные с запросом: без этого фильтра
+    # в комплект попадал любой дешёвый товар из хвоста списка
+    relevant = [it for it in catalog_items if score_item(it) > 0]
+    scored = sorted(relevant, key=score_item, reverse=True)
 
-    # Подбираем от 2 до 4 товаров из разных брендов / типов
+    # Одного совпадения на комплект не хватает, поэтому дополняем его товарами
+    # из тех же категорий. Чужие категории сюда не попадают — именно из-за них
+    # к запросу про офисный стул подмешивались смеситель и керамогранит.
+    relevant_cats = {it["cat"] for it in scored}
+    picked_ids = {it["id"] for it in scored}
+    companions = sorted(
+        (it for it in catalog_items
+         if it["cat"] in relevant_cats and it["id"] not in picked_ids),
+        key=lambda it: it["price"],
+    )
+
+    # Подбираем до 4 товаров, не выходя за бюджет
     picked = []
     current_sum = 0
     target_budget = budget if budget and budget > 0 else 15_000_000
 
-    for item in scored:
-        if len(picked) >= 4:
-            break
-        if current_sum + item["price"] <= target_budget or len(picked) < 2:
-            picked.append(item)
-            current_sum += item["price"]
+    def take(candidates):
+        nonlocal current_sum
+        for item in candidates:
+            if len(picked) >= 4:
+                return
+            if current_sum + item["price"] <= target_budget:
+                picked.append(item)
+                current_sum += item["price"]
 
-    if len(picked) < 2:
-        picked = catalog_items[:3]
-        current_sum = sum(p["price"] for p in picked)
+    take(scored)
+    # дополняем только уже собранное ядро: иначе на запрос «холодильник»
+    # с малым бюджетом возвращался комплект вообще без холодильника
+    if picked:
+        take(companions)
+
+    bundle_title = f"Комплект: {query.strip().capitalize()}" if lang_code == "ru" else (
+        f"To'plam: {query.strip().capitalize()}" if lang_code == "uz" else f"Bundle: {query.strip().capitalize()}"
+    )
+
+    # Честно сообщаем, что подходящего нет, вместо набора случайных товаров
+    if not picked:
+        empty_msg = {
+            "uz": "Bu so'rov va byudjet bo'yicha mos mahsulot topilmadi. So'rovni boshqacha yozing yoki byudjetni oshiring.",
+            "en": "No matching products for this request and budget. Try rephrasing it or raising the budget.",
+        }.get(lang_code, "По этому запросу и бюджету подходящих товаров не нашлось. Переформулируйте запрос или увеличьте бюджет.")
+        return {
+            "query": query,
+            "bundle_title": bundle_title,
+            "budget": target_budget,
+            "total_price": 0,
+            "total_savings": 0,
+            "items": [],
+            "rationale": empty_msg,
+        }
 
     total_max = sum(p["max_price"] for p in picked)
     total_savings = max(0, total_max - current_sum)
 
-    # Генерация пояснения через LLM
+    # Генерация пояснения через LLM. Гостю модель цен не называет — их нет
+    # ни в промпте, ни в ответе, иначе гейт обходился бы через текст пояснения.
     sys_prompt = (
         f"You are an expert personal shopping advisor for ArzonOL in Uzbekistan. "
-        f"The user requested a shopping kit: '{query}' with budget: {target_budget} so'm.\n"
+        f"The user requested a shopping kit: '{query}'.\n"
         f"Write a friendly 2-sentence rationale in {lang_name} explaining why this combination "
-        f"is the most cost-effective and practical choice for their goal."
+        f"is a practical choice for their goal."
     )
-    user_msg = f"Selected products:\n" + "\n".join([f"- {p['brand']} {p['title']} ({_money(p['price'])})" for p in picked])
+    if unlocked:
+        sys_prompt += f"\nTheir budget is {target_budget} so'm and the kit fits within it."
+    else:
+        sys_prompt += "\nNever mention any prices, sums or numbers — you do not know them."
 
-    bundle_title = f"Комплект: {query.strip().capitalize()}" if lang_code == "ru" else (
-        f"To'plam: {query.strip().capitalize()}" if lang_code == "uz" else f"Bundle: {query.strip().capitalize()}"
+    user_msg = "Selected products:\n" + "\n".join(
+        f"- {p['brand']} {p['title']}" + (f" ({_money(p['price'])})" if unlocked else "")
+        for p in picked
     )
 
     try:
@@ -822,14 +911,17 @@ def generate_bundle(db, query: str, budget: int | None = None, category_id: str 
         "query": query,
         "bundle_title": bundle_title,
         "budget": target_budget,
-        "total_price": current_sum,
-        "total_savings": total_savings,
+        # гостю состав комплекта показываем, цены — нет: иначе через эту фичу
+        # обходился гейт, закрывающий цены в /api/products
+        "unlocked": unlocked,
+        "total_price": current_sum if unlocked else None,
+        "total_savings": total_savings if unlocked else None,
         "items": [
             {
                 "id": p["id"],
                 "title": p["title"],
                 "brand": p["brand"],
-                "price": p["price"],
+                "price": p["price"] if unlocked else None,
                 "image": "/" + p["image"] if not p["image"].startswith("/") else p["image"],
                 "platform": p["platform"],
                 "rating": p["rating"]
