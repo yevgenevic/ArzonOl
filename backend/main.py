@@ -78,6 +78,18 @@ class ChatIn(BaseModel):
     history: list[ChatTurn] = Field(default_factory=list, max_length=12)
 
 
+class CompareVerdictIn(BaseModel):
+    product_ids: list[str] = Field(min_length=2, max_length=4)
+    lang: Literal["ru", "uz", "en"] = "ru"
+
+
+class BundleIn(BaseModel):
+    query: str = Field(min_length=2, max_length=200)
+    budget: int | None = None
+    category_id: str | None = None
+    lang: Literal["ru", "uz", "en"] = "ru"
+
+
 class UserOut(BaseModel):
     id: int
     email: str
@@ -519,6 +531,31 @@ def ai_chat(body: ChatIn, request: Request, user=Depends(current_user)):
     if user is None:
         reply = ai.guest_safe(reply, db, body.lang)
     return {"reply": reply}
+
+
+@app.post("/api/ai/compare-verdict")
+def ai_compare_verdict(body: CompareVerdictIn):
+    """ИИ-сравнение выбранных товаров: отличия, кому подойдёт, вердикт."""
+    res = ai.generate_comparison_verdict(db, body.product_ids, body.lang)
+    return res
+
+
+@app.get("/api/ai/price-advisor/{product_id}")
+def ai_price_advisor(product_id: str, lang: Literal["ru", "uz", "en"] = "ru"):
+    """ИИ-советник по цене: выгодный момент, стабильная цена или завышенная."""
+    return ai.generate_price_advice(db, product_id, lang)
+
+
+@app.get("/api/ai/reviews-summary/{product_id}")
+def ai_reviews_summary(product_id: str, lang: Literal["ru", "uz", "en"] = "ru"):
+    """ИИ-выжимка отзывов покупателей: плюсы, минусы, рейтинг удовлетворенности."""
+    return ai.generate_reviews_summary(db, product_id, lang)
+
+
+@app.post("/api/ai/bundle-builder")
+def ai_bundle_builder(body: BundleIn):
+    """ИИ-сборщик комплектов под задачу и бюджет из каталога."""
+    return ai.generate_bundle(db, body.query, body.budget, body.category_id, body.lang)
 
 
 @app.get("/")

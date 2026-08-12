@@ -739,7 +739,7 @@ function closeDialog() {
    сверяемся с фактическим состоянием окон. */
 function syncDialogState() {
   // .map($) передал бы индекс во второй параметр $ (root) — отсюда обёртка
-  const open = ['#auth-modal', '#alert-modal', '#compare-modal', '#overlay'].map(sel => $(sel)).find(el => el && !el.hidden)
+  const open = ['#auth-modal', '#alert-modal', '#compare-modal', '#bundle-modal', '#overlay'].map(sel => $(sel)).find(el => el && !el.hidden)
             || ($('#drawer').classList.contains('is-open') ? $('#drawer') : null);
   if (!open && activeDialog) closeDialog();
   else if (open) activeDialog = open;
@@ -860,6 +860,10 @@ function fillSheet(p) {
   const fav = $('#sheet-fav');
   fav.dataset.id = p.id;
   fav.classList.toggle('is-on', state.favorites.has(p.id));
+
+  // Загрузка ИИ-советника по цене и ИИ-выжимки отзывов
+  loadAiPriceAdvisor(p.id);
+  loadAiReviewsSummary(p.id);
 }
 
 function renderPriceChart(p) {
@@ -1103,6 +1107,7 @@ function renderCompareTable() {
   const bundle = totalBundleSavings(ids);
 
   container.innerHTML = `
+    <div id="compare-ai-verdict-container"></div>
     <div style="overflow-x:auto;">
       <table class="matrix-table">
         <thead>
@@ -1183,6 +1188,10 @@ function renderCompareTable() {
       </div>
     ` : ''}
   `;
+
+  if (products.length >= 2) {
+    loadAiCompareVerdict(ids);
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -1790,8 +1799,275 @@ function watchHeroSearch() {
 }
 
 /* --------------------------------------------------------------------------
-   Слушатели событий
+   ИИ-функции (AI Advisor, Reviews, Comparison Verdict, Bundle Builder)
    -------------------------------------------------------------------------- */
+
+const aiCache = new Map();
+
+async function loadAiPriceAdvisor(productId) {
+  const container = $('#sheet-ai-advisor');
+  if (!container) return;
+  
+  if (!CATALOG_UNLOCKED) {
+    container.hidden = true;
+    return;
+  }
+
+  container.hidden = false;
+  container.className = 'sheet__ai-advisor';
+  container.innerHTML = `<div class="ai-skeleton ai-skeleton-box"></div>`;
+
+  const cacheKey = `advisor:${productId}:${LANG}`;
+  let data = aiCache.get(cacheKey);
+
+  if (!data) {
+    try {
+      data = await api(`/api/ai/price-advisor/${productId}?lang=${LANG}`);
+      aiCache.set(cacheKey, data);
+    } catch {
+      container.hidden = true;
+      return;
+    }
+  }
+
+  if (!data || data.error) {
+    container.hidden = true;
+    return;
+  }
+
+  const status = data.status || 'fair_price';
+  let badgeColor = 'is-violet';
+  let statusIcon = '#i-spark';
+  let advisorClass = 'is-fair-price';
+
+  if (status === 'great_deal') {
+    badgeColor = 'is-green';
+    statusIcon = '#i-check';
+    advisorClass = 'is-great-deal';
+  } else if (status === 'overpriced') {
+    badgeColor = 'is-amber';
+    statusIcon = '#i-chart';
+    advisorClass = 'is-overpriced';
+  }
+
+  container.className = `sheet__ai-advisor ${advisorClass}`;
+  container.innerHTML = `
+    <div class="ai-advisor__head">
+      <span class="ai-advisor__badge ${badgeColor}">
+        <svg><use href="${statusIcon}"/></svg>
+        ${escapeHTML(data.badge)}
+      </span>
+      <span class="ai-advisor__tag"><svg><use href="#i-spark"/></svg>ArzonOL AI</span>
+    </div>
+    <p class="ai-advisor__text">${escapeHTML(data.advice)}</p>
+    ${data.target_price ? `
+      <button class="ai-advisor__action" type="button" data-alert-target="${data.target_price}">
+        <svg><use href="#i-bell"/></svg>
+        ${t('ai.setTargetPrice')}: ${money(data.target_price)}
+      </button>` : ''}
+  `;
+}
+
+async function loadAiReviewsSummary(productId) {
+  const container = $('#sheet-ai-reviews');
+  if (!container) return;
+
+  container.hidden = false;
+  container.innerHTML = `<div class="ai-skeleton ai-skeleton-box" style="height:120px"></div>`;
+
+  const cacheKey = `reviews:${productId}:${LANG}`;
+  let data = aiCache.get(cacheKey);
+
+  if (!data) {
+    try {
+      data = await api(`/api/ai/reviews-summary/${productId}?lang=${LANG}`);
+      aiCache.set(cacheKey, data);
+    } catch {
+      container.hidden = true;
+      return;
+    }
+  }
+
+  if (!data || data.error || !data.pros) {
+    container.hidden = true;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="ai-reviews__header">
+      <h3 class="ai-reviews__title"><svg><use href="#i-spark"/></svg>${t('ai.reviewsSummary')}</h3>
+      <span class="ai-reviews__satisfaction">${data.satisfaction}% ${t('ai.satisfaction')}</span>
+    </div>
+    <div class="ai-reviews__grid">
+      <div class="ai-reviews__col ai-reviews__col--pros">
+        <div class="ai-reviews__col-title">${t('ai.pros')}</div>
+        <ul class="ai-reviews__list">
+          ${data.pros.map(item => `
+            <li class="ai-reviews__item ai-reviews__item--pro">
+              <svg><use href="#i-check"/></svg>
+              <span>${escapeHTML(item)}</span>
+            </li>`).join('')}
+        </ul>
+      </div>
+      <div class="ai-reviews__col ai-reviews__col--cons">
+        <div class="ai-reviews__col-title">${t('ai.cons')}</div>
+        <ul class="ai-reviews__list">
+          ${data.cons.map(item => `
+            <li class="ai-reviews__item ai-reviews__item--con">
+              <svg><use href="#i-close"/></svg>
+              <span>${escapeHTML(item)}</span>
+            </li>`).join('')}
+        </ul>
+      </div>
+    </div>
+    <p class="ai-reviews__verdict"><strong>${t('ai.verdict')}:</strong> ${escapeHTML(data.verdict)}</p>
+  `;
+}
+
+async function loadAiCompareVerdict(productIds) {
+  const container = $('#compare-ai-verdict-container');
+  if (!container || productIds.length < 2) return;
+
+  container.innerHTML = `
+    <div class="compare-modal__ai-verdict">
+      <div class="ai-skeleton ai-skeleton-box" style="height:140px"></div>
+    </div>
+  `;
+
+  const cacheKey = `compare:${productIds.slice().sort().join(',')}:${LANG}`;
+  let data = aiCache.get(cacheKey);
+
+  if (!data) {
+    try {
+      data = await api('/api/ai/compare-verdict', {
+        method: 'POST',
+        body: { product_ids: productIds.slice(0, 4), lang: LANG }
+      });
+      aiCache.set(cacheKey, data);
+    } catch {
+      container.innerHTML = '';
+      return;
+    }
+  }
+
+  if (!data || data.error || !data.key_differences) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="compare-modal__ai-verdict">
+      <div class="compare-ai__head">
+        <h3 class="compare-ai__title"><svg><use href="#i-spark"/></svg>${t('ai.compareVerdict')}</h3>
+        <span class="ai-advisor__tag"><svg><use href="#i-spark"/></svg>ArzonOL AI</span>
+      </div>
+      <div class="compare-ai__differences">
+        <div class="compare-ai__section-label">${t('ai.keyDifferences')}</div>
+        <div class="compare-ai__diff-list">
+          ${data.key_differences.map(d => `
+            <div class="compare-ai__diff-item">
+              <svg><use href="#i-check"/></svg>
+              <span>${escapeHTML(d)}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="compare-ai__recommendations">
+        ${(data.recommendations || []).map(r => `
+          <div class="compare-ai__rec-card">
+            <div class="compare-ai__rec-title">${escapeHTML(r.title || r.product_id)}</div>
+            <p class="compare-ai__rec-text">${escapeHTML(r.for_whom)}</p>
+          </div>`).join('')}
+      </div>
+      <div class="compare-ai__best-value">
+        <div class="compare-ai__best-icon"><svg><use href="#i-spark"/></svg></div>
+        <div class="compare-ai__best-content">
+          <div class="compare-ai__best-label">${t('ai.bestValue')}</div>
+          <p class="compare-ai__best-text">${escapeHTML(data.best_value)}</p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function openBundleModal(defaultQuery = '', defaultBudget = null) {
+  const modal = $('#bundle-modal');
+  if (!modal) return;
+
+  if (defaultQuery) $('#bundle-query-input').value = defaultQuery;
+  if (defaultBudget) $('#bundle-budget-input').value = defaultBudget;
+
+  modal.hidden = false;
+  requestAnimationFrame(() => modal.classList.add('is-open'));
+  document.body.style.overflow = 'hidden';
+  openDialog(modal);
+}
+
+function closeBundleModal() {
+  const modal = $('#bundle-modal');
+  if (!modal) return;
+  modal.classList.remove('is-open');
+  setTimeout(() => { modal.hidden = true; }, 200);
+  closeDialog();
+}
+
+async function submitBundleBuilder(e) {
+  if (e) e.preventDefault();
+  const query = $('#bundle-query-input').value.trim();
+  const budgetVal = $('#bundle-budget-input').value;
+  const budget = budgetVal ? parseInt(budgetVal, 10) : null;
+  if (!query) return;
+
+  const btn = $('#bundle-submit-btn');
+  const resultsBox = $('#bundle-results');
+
+  btn.disabled = true;
+  resultsBox.hidden = false;
+  resultsBox.innerHTML = `<div class="ai-skeleton ai-skeleton-box" style="height:180px; margin-top:16px;"></div>`;
+
+  try {
+    const data = await api('/api/ai/bundle-builder', {
+      method: 'POST',
+      body: { query, budget, lang: LANG }
+    });
+
+    const itemIds = (data.items || []).map(it => it.id);
+
+    resultsBox.innerHTML = `
+      <div class="bundle-results__header">
+        <h3 class="bundle-results__title">${escapeHTML(data.bundle_title)}</h3>
+      </div>
+      <div class="bundle-results__rationale">
+        <svg style="width:14px;height:14px;display:inline-block;vertical-align:-2px;margin-right:4px;color:var(--color-shop-violet)"><use href="#i-spark"/></svg>
+        ${escapeHTML(data.rationale)}
+      </div>
+      <div class="bundle-results__list">
+        ${(data.items || []).map(it => `
+          <div class="bundle-product-card">
+            <img src="${it.image}" alt="${escapeHTML(it.title)}" loading="lazy">
+            <div class="bundle-product-card__info">
+              <div class="bundle-product-card__brand">${escapeHTML(it.brand)}</div>
+              <div class="bundle-product-card__title">${escapeHTML(it.title)}</div>
+              <div class="bundle-product-card__price">${money(it.price)}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+      <div class="bundle-summary-bar">
+        <div class="bundle-summary-bar__totals">
+          <span class="bundle-summary-bar__total-val">${money(data.total_price)}</span>
+          ${data.total_savings > 0 ? `<span class="bundle-summary-bar__savings">${t('ai.bundleSavings')} ${money(data.total_savings)}</span>` : ''}
+        </div>
+        <button class="btn btn--primary" type="button" data-bundle-add-compare="${itemIds.join(',')}">
+          <svg><use href="#i-compare"/></svg>
+          <span>${t('ai.bundleAddCompare')}</span>
+        </button>
+      </div>
+    `;
+  } catch (err) {
+    resultsBox.innerHTML = `<p class="empty">${escapeHTML(err.message || 'Error generating bundle')}</p>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
 
 function wireEvents() {
   document.addEventListener('click', e => {
@@ -1947,13 +2223,58 @@ function wireEvents() {
       return;
     }
 
-    if (e.target.closest('[data-open-compare]')) { openCompareDrawer(); return; }
-    if (e.target.closest('[data-close-compare]') || e.target.id === 'scrim') { closeCompareDrawer(); return; }
+    // Открытие модалки ИИ-сборщика комплектов
+    if (e.target.closest('#btn-open-bundle') || e.target.closest('#drawer-bundle-trigger')) {
+      openBundleModal();
+      return;
+    }
+    if (e.target.closest('[data-close-bundle-modal]') || e.target.id === 'bundle-modal') {
+      closeBundleModal();
+      return;
+    }
+
+    // Клик по пресету комплекта
+    const bundleChip = e.target.closest('.bundle-chip');
+    if (bundleChip) {
+      $('#bundle-query-input').value = bundleChip.dataset.query;
+      $('#bundle-budget-input').value = bundleChip.dataset.budget;
+      submitBundleBuilder();
+      return;
+    }
+
+    // Добавление всех товаров комплекта в сравнение
+    const bundleAddBtn = e.target.closest('[data-bundle-add-compare]');
+    if (bundleAddBtn) {
+      const ids = bundleAddBtn.dataset.bundleAddCompare.split(',').filter(Boolean);
+      ids.forEach(id => state.compare.add(id));
+      persist();
+      syncBadges();
+      renderCompareDrawer();
+      closeBundleModal();
+      toast(t('ai.bundleAdded'));
+      return;
+    }
+
+    // Клик по целевой цене из ИИ-советника
+    const alertTargetBtn = e.target.closest('[data-alert-target]');
+    if (alertTargetBtn) {
+      const target = parseInt(alertTargetBtn.dataset.alertTarget, 10);
+      if (openProductId) {
+        openAlertModal(openProductId);
+        if (target) $('#alert-target-price').value = target;
+      }
+      return;
+    }
+
+    if (e.target.closest('[data-close-compare]')) { closeCompareDrawer(); return; }
     if (e.target.closest('[data-close-compare-modal]')) { closeCompareModal(); return; }
     if (e.target.closest('[data-close-sheet]') || e.target.id === 'overlay') { closeSheet(); return; }
 
     if (!e.target.closest('.search, .topnav__search')) hideSuggests();
   });
+
+  // Сабмит формы ИИ-сборщика комплектов
+  $('#bundle-form')?.addEventListener('submit', submitBundleBuilder);
 
   // Изменение сортировки
   $('#sort-select').addEventListener('change', e => {
