@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.png" alt="ArzonOL Logo" width="200"/>
+  <img src="assets/img/logo.png" alt="ArzonOL Logo" width="200"/>
 </p>
 
 <h1 align="center">ArzonOL — Narxlar agregatori 💰</h1>
