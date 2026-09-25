@@ -6,9 +6,7 @@
 """
 
 import sqlite3
-from pathlib import Path
-
-DB_PATH = Path(__file__).resolve().parent / "arzonol.db"
+from config import DB_PATH
 
 SCHEMA = """
 PRAGMA journal_mode = WAL;
@@ -153,14 +151,28 @@ CREATE TABLE IF NOT EXISTS sync_logs (
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_sync_logs_platform ON sync_logs(platform_id);
+CREATE INDEX IF NOT EXISTS idx_offers_platform ON offers(platform_id);
+CREATE INDEX IF NOT EXISTS idx_search_user_date ON search_queries(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_views_user_date ON product_views(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_views_product ON product_views(product_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);
 """
 
 
 def connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+def get_db():
+    """One connection per request; FastAPI caches this dependency per request."""
+    conn = connect()
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 # Колонки, добавленные после первого выпуска. CREATE TABLE IF NOT EXISTS их

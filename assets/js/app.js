@@ -64,20 +64,20 @@ const persist = () => {
 let currentUser = null;
 
 async function restoreSession() {
-  if (!localStorage.getItem('arzonol:token')) return;
+  localStorage.removeItem('arzonol:token'); // Retire legacy script-readable sessions.
   try {
     const { user } = await api('/api/auth/me');
     currentUser = user;
-  } catch {
-    // токен протух или база пересоздана — молча выходим
-    localStorage.removeItem('arzonol:token');
+  } catch (error) {
+    if (error.status !== 401) throw error;
+    currentUser = null;
   }
 }
 
 async function doAuth(mode, payload) {
-  const { token, user } = await api(`/api/auth/${mode}`, { method: 'POST', body: payload, auth: false });
-  localStorage.setItem('arzonol:token', token);
+  const { user } = await api(`/api/auth/${mode}`, { method: 'POST', body: payload, auth: false });
   currentUser = user;
+  aiCache.clear();
 
   // после входа каталог перезапрашивается — теперь с ценами
   await loadCatalog();
@@ -95,12 +95,23 @@ async function doAuth(mode, payload) {
 }
 
 async function logout() {
-  try { await api('/api/auth/logout', { method: 'POST' }); } catch { /* уже невалиден */ }
-  localStorage.removeItem('arzonol:token');
+  try {
+    await api('/api/auth/logout', { method: 'POST' });
+  } catch (error) {
+    toast(error.message);
+    return;
+  }
   currentUser = null;
   state.favorites.clear();
   state.compare.clear();
-  await loadCatalog();
+  aiCache.clear();
+  persist();
+  // Immediately remove privileged data even if the reload fails.
+  PRODUCTS = PRODUCTS.map(p => ({ ...p, offers: [], history: [] }));
+  CATALOG_UNLOCKED = false;
+  if (openProductId) closeSheet();
+  $('#cabinet').hidden = true;
+  try { await loadCatalog(); } catch (error) { toast(error.message); }
   renderAll();
   renderNotifications([]);
   toast(t('auth.loggedOut'));
@@ -112,7 +123,7 @@ async function checkNotifications() {
   if (!currentUser) return;
   try {
     const { notifications } = await api('/api/notifications');
-    renderNotifications(notifications);
+    if (currentUser) renderNotifications(notifications);
   } catch { /* не критично */ }
 }
 
@@ -136,10 +147,10 @@ function renderNotifications(list) {
     const p = byId(n.product_id);
     if (!p) return '';
     return `
-          <button class="notif__item" type="button" data-open="${p.id}">
-            <img src="${p.thumbs[0] || p.image}" alt="" loading="lazy">
+          <button class="notif__item" type="button" data-open="${escapeHTML(p.id)}">
+            <img src="${escapeHTML(p.thumbs[0] || p.image)}" alt="" loading="lazy">
             <span class="notif__text">
-              <span class="notif__name">${p.brand} — ${tr(p.title)}</span>
+              <span class="notif__name">${escapeHTML(p.brand)} — ${escapeHTML(tr(p.title))}</span>
               <span class="notif__prices">${t('notif.reached')} ${money(n.current)}
                 <s>${money(n.target)}</s></span>
             </span>
@@ -164,9 +175,9 @@ function renderAuthUI() {
   if (!box) return;
 
   box.innerHTML = currentUser
-    ? `<button class="topnav__user" type="button" id="user-menu-btn" title="${currentUser.email}">
-         <span class="topnav__user-avatar">${(currentUser.name || currentUser.email)[0].toUpperCase()}</span>
-         <span class="topnav__user-name">${currentUser.name || currentUser.email.split('@')[0]}</span>
+    ? `<button class="topnav__user" type="button" id="user-menu-btn" title="${escapeHTML(currentUser.email)}">
+         <span class="topnav__user-avatar">${escapeHTML((currentUser.name || currentUser.email)[0].toUpperCase())}</span>
+         <span class="topnav__user-name">${escapeHTML(currentUser.name || currentUser.email.split('@')[0])}</span>
        </button>`
     : `<button class="topnav__btn" type="button" data-auth="login" data-i18n-attr="title:nav.account,aria-label:nav.account" title="${t('nav.account')}">
          <svg><use href="#i-user"/></svg>
@@ -200,19 +211,19 @@ function orbitHTML({ id, kind, w }, index, clone) {
   const alt = `${p.brand} — ${tr(p.title)}`;
 
   const inner = bare
-    ? `<img src="${p.image}" alt="${alt}" loading="lazy">`
-    : `<div class="orbit__media"><img src="${p.image}" alt="${alt}" loading="lazy"></div>
+    ? `<img src="${escapeHTML(p.image)}" alt="${escapeHTML(alt)}" loading="lazy">`
+    : `<div class="orbit__media"><img src="${escapeHTML(p.image)}" alt="${escapeHTML(alt)}" loading="lazy"></div>
        <div class="orbit__meta">
-         <div class="orbit__brand">${p.brand}</div>
+         <div class="orbit__brand">${escapeHTML(p.brand)}</div>
          <div class="orbit__rating">${starsHTML(p.rating)}<span>${num(p.reviews)}</span></div>
        </div>`;
 
-  return `<button class="orbit orbit--${kind}" type="button" data-open="${p.id}" style="${style}"${hidden}>${inner}</button>`;
+  return `<button class="orbit orbit--${kind}" type="button" data-open="${escapeHTML(p.id)}" style="${style}"${hidden}>${inner}</button>`;
 }
 
 /* Цена для гостя закрыта: показываем призыв войти, а не «от 0 сум» */
 const priceLabel = p => CATALOG_UNLOCKED
-  ? formatPriceFrom(bestOffer(p).price)
+  ? (bestOffer(p).inStock ? formatPriceFrom(bestOffer(p).price) : escapeHTML(t('sheet.outOfStock')))
   : `<span class="price-locked">${t('gate.showPrices')}</span>`;
 
 function cardHTML(p, rank) {
@@ -228,14 +239,14 @@ function cardHTML(p, rank) {
   const storesTag = `<span class="card__tag-stores">${offersCount(p)} ${t('badge.stores')}</span>`;
 
   return `
-    <div class="card" data-id="${p.id}">
+    <div class="card" data-id="${escapeHTML(p.id)}">
       ${badge}
-      <button class="fav${on}" type="button" data-fav="${p.id}" aria-label="${t('sheet.trackPrice')}" aria-pressed="${on ? 'true' : 'false'}">${icon('heart')}</button>
-      <button class="card__open" type="button" data-open="${p.id}">
-        <div class="card__media"><img src="${p.image}" alt="${p.brand} — ${tr(p.title)}" loading="lazy"></div>
+      <button class="fav${on}" type="button" data-fav="${escapeHTML(p.id)}" aria-label="${t('sheet.trackPrice')}" aria-pressed="${on ? 'true' : 'false'}">${icon('heart')}</button>
+      <button class="card__open" type="button" data-open="${escapeHTML(p.id)}">
+        <div class="card__media"><img src="${escapeHTML(p.image)}" alt="${escapeHTML(p.brand)} — ${escapeHTML(tr(p.title))}" loading="lazy"></div>
         <div class="card__body">
-          <div class="card__brand">${p.brand}</div>
-          <div class="card__title">${tr(p.title)}</div>
+          <div class="card__brand">${escapeHTML(p.brand)}</div>
+          <div class="card__title">${escapeHTML(tr(p.title))}</div>
           <div class="card__foot">
             <span class="card__price">${priceLabel(p)}</span>
             <span class="card__rating">${starsHTML(p.rating)}<span>${num(p.reviews)}</span></span>
@@ -246,7 +257,7 @@ function cardHTML(p, rank) {
           ${storesTag}
         </div>
       </button>
-      <div class="card__strip">${p.thumbs.map(s => `<img src="${s}" alt="" loading="lazy">`).join('')}</div>
+      <div class="card__strip">${p.thumbs.map(s => `<img src="${escapeHTML(s)}" alt="" loading="lazy">`).join('')}</div>
     </div>`;
 }
 
@@ -278,16 +289,16 @@ function renderRegionSelector() {
   $('#region-current-label').textContent = tr(current.name);
 
   $('#region-dropdown').innerHTML = REGIONS.map(r => `
-    <button class="region-opt${r.id === state.region ? ' is-active' : ''}" type="button" data-region="${r.id}" role="option">
-      <span>${tr(r.name)}</span>
+    <button class="region-opt${r.id === state.region ? ' is-active' : ''}" type="button" data-region="${escapeHTML(r.id)}" role="option">
+      <span>${escapeHTML(tr(r.name))}</span>
       ${r.id === state.region ? icon('check') : ''}
     </button>`).join('');
 }
 
 function renderPlatformFilterChips() {
   $('#platform-chips').innerHTML = PLATFORMS.map(p => `
-    <button class="platform-chip${state.platformFilter === p.id ? ' is-active' : ''}" type="button" data-platform-filter="${p.id}">
-      ${p.name}
+    <button class="platform-chip${state.platformFilter === p.id ? ' is-active' : ''}" type="button" data-platform-filter="${escapeHTML(p.id)}">
+      ${escapeHTML(p.name)}
     </button>`).join('');
 }
 
@@ -295,7 +306,7 @@ function renderNav() {
   const links = ({ home, cls }) => [
     `<button class="${cls}${!state.filter && !state.query ? ' is-active' : ''}" type="button" data-nav="home">${home}</button>`,
     ...CATEGORIES.map(c =>
-      `<button class="${cls}${state.filter === c.id ? ' is-active' : ''}" type="button" data-cat="${c.id}">${tr(c.label)}</button>`)
+      `<button class="${cls}${state.filter === c.id ? ' is-active' : ''}" type="button" data-cat="${escapeHTML(c.id)}">${escapeHTML(tr(c.label))}</button>`)
   ].join('');
 
   $('#topnav-cats').innerHTML = links({ home: t('nav.home'), cls: 'topnav__link' });
@@ -334,11 +345,11 @@ function renderCatalogDrawer() {
     const count = PRODUCTS.filter(p => p.cat === c.id).length;
     const isAct = state.filter === c.id;
     return `
-      <button class="catalog-drawer__item${isAct ? ' is-active' : ''}" type="button" data-cat="${c.id}" style="--cat:${c.icon}">
+      <button class="catalog-drawer__item${isAct ? ' is-active' : ''}" type="button" data-cat="${escapeHTML(c.id)}" style="--cat:${escapeHTML(c.icon)}">
         <span class="catalog-drawer__item-icon">${icon(c.glyph)}</span>
         <div class="catalog-drawer__item-info">
-          <span class="catalog-drawer__item-name">${tr(c.label)}</span>
-          <span class="catalog-drawer__item-meta">${count} ${plural(count)} · ${tr(c.hint)}</span>
+          <span class="catalog-drawer__item-name">${escapeHTML(tr(c.label))}</span>
+          <span class="catalog-drawer__item-meta">${count} ${plural(count)} · ${escapeHTML(tr(c.hint))}</span>
         </div>
         <svg class="catalog-drawer__item-arrow"><use href="#i-chevron-right"/></svg>
       </button>`;
@@ -349,15 +360,18 @@ function openCatalogModal() {
   renderCatalogDrawer();
   const modal = $('#catalog-modal');
   if (!modal) return;
+  lastFocused = document.activeElement;
   modal.hidden = false;
   requestAnimationFrame(() => modal.classList.add('is-open'));
   document.body.classList.add('no-scroll');
+  openDialog(modal);
 }
 
 function closeCatalogModal() {
   const modal = $('#catalog-modal');
   if (!modal) return;
   modal.classList.remove('is-open');
+  closeDialog();
   setTimeout(() => {
     modal.hidden = true;
     document.body.classList.remove('no-scroll');
@@ -366,18 +380,18 @@ function closeCatalogModal() {
 
 function renderCategories() {
   $('#categories').innerHTML = CATEGORIES.map(c => `
-    <button class="pill" type="button" data-cat="${c.id}" aria-pressed="${state.filter === c.id}">
-      <span class="pill__icon" style="background:${c.icon}"></span>${tr(c.label)}
+    <button class="pill" type="button" data-cat="${escapeHTML(c.id)}" aria-pressed="${state.filter === c.id}">
+      <span class="pill__icon" style="background:${escapeHTML(c.icon)}"></span>${escapeHTML(tr(c.label))}
     </button>`).join('');
 
   $('#cats-grid').innerHTML = CATEGORIES.map(c => {
     const count = PRODUCTS.filter(p => p.cat === c.id).length;
     return `
-      <button class="cat" type="button" data-cat="${c.id}" style="--cat:${c.icon}">
+      <button class="cat" type="button" data-cat="${escapeHTML(c.id)}" style="--cat:${escapeHTML(c.icon)}">
         <span class="cat__blob" aria-hidden="true"></span>
         <span class="cat__icon">${icon(c.glyph)}</span>
-        <span class="cat__name">${tr(c.label)}</span>
-        <span class="cat__meta">${count} ${plural(count)} · ${tr(c.hint)}</span>
+        <span class="cat__name">${escapeHTML(tr(c.label))}</span>
+        <span class="cat__meta">${count} ${plural(count)} · ${escapeHTML(tr(c.hint))}</span>
       </button>`;
   }).join('');
 
@@ -396,9 +410,9 @@ const syncCatState = () => {
 
 const sectionHead = (title, count, sub) => `
   <div class="section__head">
-    <h2 class="section__title">${title}</h2>
+    <h2 class="section__title">${escapeHTML(title)}</h2>
     <span class="section__chevron">${icon('chevron-right')}</span>
-    <span class="section__count">${sub ?? `${count} ${plural(count)}`}</span>
+    <span class="section__count">${escapeHTML(sub ?? `${count} ${plural(count)}`)}</span>
   </div>`;
 
 function renderSections() {
@@ -425,9 +439,9 @@ function renderSections() {
 
 const railHTML = inner => `
   <div class="scroller">
-    <button class="scroller__arrow scroller__arrow--prev" type="button" data-scroll="-1" aria-label="${t('search.clear')}">${icon('chevron-left')}</button>
+    <button class="scroller__arrow scroller__arrow--prev" type="button" data-scroll="-1" aria-label="${escapeHTML(t('search.clear'))}">${icon('chevron-left')}</button>
     <div class="scroller__track">${inner}</div>
-    <button class="scroller__arrow scroller__arrow--next" type="button" data-scroll="1" aria-label="${t('search.submit')}">${icon('chevron-right')}</button>
+    <button class="scroller__arrow scroller__arrow--next" type="button" data-scroll="1" aria-label="${escapeHTML(t('search.submit'))}">${icon('chevron-right')}</button>
   </div>`;
 
 function renderPartners() {
@@ -437,8 +451,8 @@ function renderPartners() {
         <span class="partner-card__icon">${p.icon}</span>
       </div>
       <div class="partner-card__info">
-        <span class="partner-card__name">${p.name}</span>
-        <span class="partner-card__type">${p.type}</span>
+        <span class="partner-card__name">${escapeHTML(p.name)}</span>
+        <span class="partner-card__type">${escapeHTML(p.type)}</span>
       </div>
     </div>`;
 
@@ -474,169 +488,6 @@ function initScroller(scroller) {
 /* --------------------------------------------------------------------------
    Сортировка и фильтрация
    -------------------------------------------------------------------------- */
-
-function sortAndFilterItems(items) {
-  let list = [...items];
-
-  if (state.inStockOnly) {
-    list = list.filter(p => inStockCount(p) > 0);
-  }
-
-  if (state.platformFilter) {
-    list = list.filter(p => p.offers.some(o => o.platform === state.platformFilter && o.inStock));
-  }
-
-  switch (state.sort) {
-    case 'priceAsc':
-      list.sort((a, b) => bestOffer(a).price - bestOffer(b).price);
-      break;
-    case 'savingsDesc':
-      list.sort((a, b) => savings(b).amount - savings(a).amount);
-      break;
-    case 'ratingDesc':
-      list.sort((a, b) => b.rating - a.rating);
-      break;
-    case 'popularDesc':
-      list.sort((a, b) => b.sold - a.sold);
-      break;
-  }
-
-  return list;
-}
-
-/* --------------------------------------------------------------------------
-   Ko'p tilli aqlli qidiruv tizimi (Multilingual Smart Search Engine)
-   Qo'llab-quvvatlaydi: O'zbekcha (Lotin va Kirill), Ruscha, Inglizcha + Sinonimlar
-   -------------------------------------------------------------------------- */
-
-const SEARCH_SYNONYMS = {
-  smartphones: [
-    'смартфон', 'смартфоны', 'телефон', 'телефоны', 'сотка', 'мобильник',
-    'smartfon', 'smartfonlar', 'telefon', 'telefonlar', 'sotka', 'mobil',
-    'smartphone', 'smartphones', 'phone', 'phones', 'mobile', 'cellphone'
-  ],
-  laptops: [
-    'ноутбук', 'ноутбуки', 'ноут', 'компьютер', 'компьютеры', 'комп', 'лэптоп',
-    'noutbuk', 'noutbuklar', 'nout', 'kompyuter', 'kompyuterlar', 'komp', 'leptop',
-    'laptop', 'laptops', 'notebook', 'notebooks', 'computer', 'pc', 'macbook', 'макбук'
-  ],
-  audio: [
-    'наушники', 'наушник', 'гарнитура', 'уши', 'вкладыши', 'беспроводные наушники',
-    'quloqchin', 'quloqchinlar', 'naushnik', 'naushniklar', 'garnitura', 'simsiz quloqchin',
-    'headphones', 'headphone', 'earphones', 'earbuds', 'headset', 'airpods', 'аирподс', 'эйрподс', 'buds'
-  ],
-  tablets: [
-    'планшет', 'планшеты', 'таблет', 'айпад',
-    'planshet', 'planshetlar', 'tab',
-    'tablet', 'tablets', 'ipad'
-  ],
-  apple: ['apple', 'эппл', 'эпл', 'яблоко', 'айфон', 'iphone', 'айпад', 'ipad', 'макбук', 'macbook', 'airpods', 'аирподс', 'эйрподс'],
-  samsung: ['samsung', 'самсунг', 'galaxy', 'галакси'],
-  xiaomi: ['xiaomi', 'redmi', 'сяоми', 'ксиаоми', 'редми', 'poco', 'поко'],
-  sony: ['sony', 'сони'],
-  huawei: ['huawei', 'хуавей', 'honor', 'хонор'],
-  asus: ['asus', 'асус'],
-  lenovo: ['lenovo', 'леново', 'thinkpad'],
-  acer: ['acer', 'асер', 'эйсер'],
-  jbl: ['jbl', 'жбл', 'джбл']
-};
-
-const CYR_TO_LAT = {
-  'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo', 'ж': 'j',
-  'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o',
-  'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'x', 'ц': 'ts',
-  'ч': 'ch', 'ш': 'sh', 'щ': 'sh', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu',
-  'я': 'ya', 'ў': "o'", 'ғ': "g'", 'қ': 'q', 'ҳ': 'h'
-};
-
-const LAT_TO_CYR = {
-  'sh': 'ш', 'ch': 'ч', 'yo': 'ё', 'yu': 'ю', 'ya': 'я', 'ts': 'ц',
-  "o'": 'ў', "g'": 'ғ', "o‘": 'ў', "g‘": 'ғ', "o`": 'ў', "g`": 'ғ',
-  'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д', 'e': 'е', 'j': 'ж',
-  'z': 'з', 'i': 'и', 'y': 'й', 'k': 'к', 'l': 'л', 'm': 'м', 'n': 'н',
-  'o': 'о', 'p': 'п', 'r': 'р', 's': 'с', 't': 'т', 'u': 'у', 'f': 'ф',
-  'x': 'х', 'q': 'қ', 'h': 'ҳ', 'w': 'в', 'c': 'к'
-};
-
-function normalizeSearchText(text) {
-  if (!text) return '';
-  return String(text)
-    .toLowerCase()
-    .replace(/[‘`ʼ’]/g, "'")
-    .replace(/[^a-zа-яёўғқҳ0-9\s']/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function transliterateCyrToLat(str) {
-  return str.split('').map(c => CYR_TO_LAT[c] !== undefined ? CYR_TO_LAT[c] : c).join('');
-}
-
-function transliterateLatToCyr(str) {
-  let res = str;
-  ['sh', 'ch', 'yo', 'yu', 'ya', 'ts', "o'", "g'", "o‘", "g‘"].forEach(k => {
-    if (LAT_TO_CYR[k]) res = res.replaceAll(k, LAT_TO_CYR[k]);
-  });
-  return res.split('').map(c => LAT_TO_CYR[c] !== undefined ? LAT_TO_CYR[c] : c).join('');
-}
-
-function buildProductSearchCorpus(p) {
-  const cat = catOf(p.cat);
-  const catLabels = cat ? `${cat.label?.ru || ''} ${cat.label?.uz || ''} ${cat.label?.en || ''}` : '';
-  const catSynonyms = (SEARCH_SYNONYMS[p.cat] || []).join(' ');
-  const brandLower = (p.brand || '').toLowerCase();
-  const brandSynonyms = (SEARCH_SYNONYMS[brandLower] || []).join(' ');
-
-  const titles = `${p.title?.ru || ''} ${p.title?.uz || ''} ${p.title?.en || ''}`;
-  const raw = `${p.brand || ''} ${titles} ${p.cat || ''} ${catLabels} ${catSynonyms} ${brandSynonyms}`;
-
-  const norm = normalizeSearchText(raw);
-  const lat = transliterateCyrToLat(norm);
-  const cyr = transliterateLatToCyr(norm);
-
-  return `${norm} ${lat} ${cyr}`;
-}
-
-function match(p, q) {
-  const normQuery = normalizeSearchText(q);
-  if (!normQuery) return true;
-
-  if (!p._searchCorpus) {
-    p._searchCorpus = buildProductSearchCorpus(p);
-  }
-
-  const terms = normQuery.split(/\s+/).filter(Boolean);
-
-  return terms.every(term => {
-    const termLat = transliterateCyrToLat(term);
-    const termCyr = transliterateLatToCyr(term);
-    return p._searchCorpus.includes(term) ||
-           p._searchCorpus.includes(termLat) ||
-           p._searchCorpus.includes(termCyr);
-  });
-}
-
-function searchScore(p, needle) {
-  let score = 0;
-  const currentTitle = (tr(p.title) || '').toLowerCase();
-  const brand = (p.brand || '').toLowerCase();
-  const normNeedle = normalizeSearchText(needle);
-
-  if (currentTitle.includes(normNeedle)) score += 100;
-  if (brand.includes(normNeedle)) score += 80;
-  if (p.cat && normNeedle.includes(p.cat)) score += 50;
-  if (p._searchCorpus && p._searchCorpus.includes(normNeedle)) score += 30;
-
-  return score;
-}
-
-function search(q) {
-  const needle = q.trim();
-  if (!needle) return [];
-  const matched = PRODUCTS.filter(p => match(p, needle));
-  matched.sort((a, b) => searchScore(b, needle) - searchScore(a, needle));
-  return matched;
-}
 
 function applyView() {
   const results = $('#results');
@@ -687,11 +538,11 @@ function renderSuggest(q, box) {
   if (!hits.length) { box.hidden = true; box.innerHTML = ''; return; }
 
   box.innerHTML = hits.map(p => `
-    <button class="suggest__item" type="button" data-suggest="${p.id}" role="option">
-      <img class="suggest__thumb" src="${p.thumbs[0]}" alt="" loading="lazy">
+    <button class="suggest__item" type="button" data-suggest="${escapeHTML(p.id)}" role="option">
+      <img class="suggest__thumb" src="${escapeHTML(p.thumbs[0])}" alt="" loading="lazy">
       <span>
-        <span class="suggest__title">${tr(p.title)}</span><br>
-        <span class="suggest__brand">${p.brand} · ${priceLabel(p)}</span>
+        <span class="suggest__title">${escapeHTML(tr(p.title))}</span><br>
+        <span class="suggest__brand">${escapeHTML(p.brand)} · ${priceLabel(p)}</span>
       </span>
     </button>`).join('');
   box.hidden = false;
@@ -715,7 +566,7 @@ function toggleFav(id) {
     : api('/api/tracked', { method: 'POST', body: { product_id: id } })
   ).catch(err => console.error('Не удалось сохранить отслеживание:', err));
 
-  $$(`[data-fav="${id}"]`).forEach(btn => {
+  $$(`[data-fav="${escapeHTML(id)}"]`).forEach(btn => {
     btn.classList.toggle('is-on', !on);
     btn.setAttribute('aria-pressed', String(!on));
   });
@@ -783,7 +634,7 @@ function updateSheetCompareBtn(id) {
 
 function renderCompareDrawer() {
   const list = $('#compare-list');
-  const ids = [...state.compare];
+  const ids = [...state.compare].filter(id => byId(id));
 
   list.innerHTML = ids.length
     ? ids.map(id => {
@@ -792,14 +643,14 @@ function renderCompareDrawer() {
       const sav = savings(p);
       const savText = sav.amount > 0 ? ` · ${formatSavings(sav.amount, sav.percent)}` : '';
       return `
-          <div class="compare-item" data-id="${id}">
-            <img src="${p.thumbs[0]}" alt="" loading="lazy">
+          <div class="compare-item" data-id="${escapeHTML(id)}">
+            <img src="${escapeHTML(p.thumbs[0])}" alt="" loading="lazy">
             <div class="compare-item__meta">
-              <div class="compare-item__brand">${p.brand}</div>
-              <div class="compare-item__title">${tr(p.title)}</div>
-              <div class="compare-item__price">${formatPriceFrom(best.price)}<span style="color:var(--color-success-green)">${savText}</span></div>
+              <div class="compare-item__brand">${escapeHTML(p.brand)}</div>
+              <div class="compare-item__title">${escapeHTML(tr(p.title))}</div>
+              <div class="compare-item__price">${priceLabel(p)}<span style="color:var(--color-success-green)">${savText}</span></div>
             </div>
-            <button class="compare-item__del" type="button" data-del-compare="${id}" aria-label="${t('compare.remove')}">
+            <button class="compare-item__del" type="button" data-del-compare="${escapeHTML(id)}" aria-label="${t('compare.remove')}">
               <svg><use href="#i-trash"/></svg>
             </button>
           </div>`;
@@ -808,7 +659,7 @@ function renderCompareDrawer() {
 
   // Калькулятор общей выгоды комплекта
   const bundleBox = $('#drawer-bundle');
-  if (ids.length >= 2) {
+  if (CATALOG_UNLOCKED && ids.length >= 2) {
     const calc = totalBundleSavings(ids);
     bundleBox.hidden = false;
     bundleBox.innerHTML = `
@@ -887,6 +738,7 @@ function trapFocus(e, dialog) {
 let activeDialog = null;
 
 function openDialog(dialog) {
+  closeAssistant();
   activeDialog = dialog;
   $('.shell')?.setAttribute('inert', '');
   $('.topnav')?.setAttribute('inert', '');
@@ -909,16 +761,22 @@ function closeDialog() {
    сверяемся с фактическим состоянием окон. */
 function syncDialogState() {
   // .map($) передал бы индекс во второй параметр $ (root) — отсюда обёртка
-  const open = ['#auth-modal', '#alert-modal', '#compare-modal', '#bundle-modal', '#overlay'].map(sel => $(sel)).find(el => el && !el.hidden)
+  const open = ['#auth-modal', '#alert-modal', '#compare-modal', '#bundle-modal', '#catalog-modal', '#overlay'].map(sel => $(sel)).find(el => el && !el.hidden)
     || ($('#drawer').classList.contains('is-open') ? $('#drawer') : null);
   if (!open && activeDialog) closeDialog();
   else if (open) activeDialog = open;
 }
 
-function openSheet(id) {
+function openSheet(id, updateURL = true) {
   const p = byId(id);
+  if (!p) return;
   lastFocused = document.activeElement;
   openProductId = id;
+  if (updateURL) {
+    const url = new URL(location.href);
+    url.searchParams.set("product", id);
+    if (url.href !== location.href) history.pushState(null, "", url);
+  }
 
   fillSheet(p);
 
@@ -934,7 +792,7 @@ function openSheet(id) {
 
   // Просмотры пишутся и для гостей, как и поисковые запросы: на них держатся
   // «Недавно просмотренные» в кабинете и статистика в админке
-  api(`/api/analytics/view/${id}`, { method: 'POST' })
+  api(`/api/analytics/view/${encodeURIComponent(id)}`, { method: 'POST' })
     .catch(() => { /* аналитика не должна ломать карточку */ });
 }
 
@@ -942,16 +800,16 @@ function fillSheet(p) {
   $('#sheet-image').src = p.image;
   $('#sheet-image').alt = `${p.brand} — ${tr(p.title)}`;
   $('#sheet-thumbs').innerHTML = [p.image, ...p.thumbs]
-    .map(src => `<img src="${src}" alt="" data-swap="${src}" loading="lazy">`).join('');
+    .map(src => `<img src="${escapeHTML(src)}" alt="" data-swap="${escapeHTML(src)}" loading="lazy">`).join('');
   $('#sheet-brand').textContent = p.brand;
   $('#sheet-title').textContent = tr(p.title);
-  $('#sheet-rating').innerHTML = `${starsHTML(p.rating)}<span>${p.rating} · ${num(p.reviews)} ${t('sheet.reviews')}</span>`;
+  $('#sheet-rating').innerHTML = `${starsHTML(p.rating)}<span>${escapeHTML(p.rating)} · ${num(p.reviews)} ${t('sheet.reviews')}</span>`;
 
   const best = bestOffer(p);
   const sav = savings(p);
 
   // Цена, выгода и график — часть закрытого блока
-  $('#sheet-price').textContent = CATALOG_UNLOCKED ? formatPriceFrom(best.price) : t('gate.pricesHidden');
+  $('#sheet-price').textContent = CATALOG_UNLOCKED ? (best.inStock ? formatPriceFrom(best.price) : t('sheet.outOfStock')) : t('gate.pricesHidden');
   $('#sheet-price').classList.toggle('is-hidden-price', !CATALOG_UNLOCKED);
 
   const savBadge = $('#sheet-savings');
@@ -998,14 +856,14 @@ function fillSheet(p) {
       const delivery = `<span class="offer-row__delivery">${t('sheet.delivery')} ${formatDelivery(deliveryDays)}</span>`;
 
       const action = o.inStock
-        ? `<a class="offer-row__btn" href="${o.url}" target="_blank" rel="noopener noreferrer">${t('sheet.visit')}<svg><use href="#i-external"/></svg></a>`
+        ? (o.url.startsWith('#') ? `<button class="offer-row__btn" type="button" disabled>${t('demo.offer')}</button>` : `<a class="offer-row__btn" href="${escapeHTML(safeURL(o.url))}" target="_blank" rel="noopener noreferrer">${t('sheet.visit')}<svg><use href="#i-external"/></svg></a>`)
         : `<button class="offer-row__btn is-disabled" type="button" disabled>${t('sheet.visit')}</button>`;
 
       return `
       <div class="${rowClass}">
         <div class="offer-row__platform">
-          <span class="offer-row__dot" style="background:${plat.color}"></span>
-          <span>${plat.name}</span>
+          <span class="offer-row__dot" style="background:${escapeHTML(plat.color)}"></span>
+          <span>${escapeHTML(plat.name)}</span>
           ${bestBadge}
         </div>
         <div class="offer-row__meta">
@@ -1093,6 +951,11 @@ function renderPriceChart(p) {
 
   const history = priceHistory(p);
   const chartBox = $('#sheet-chart');
+  if (history.length < 2) {
+    trendBadge.textContent = '';
+    chartBox.textContent = t('chart.noHistory');
+    return;
+  }
 
   const width = 340;
   const height = 80;
@@ -1125,15 +988,20 @@ function renderPriceChart(p) {
       <path d="${pathD}" fill="none" stroke="var(--color-shop-violet)" stroke-width="2.5" stroke-linecap="round"/>
       ${points.map(pt => `
         <circle cx="${pt.x}" cy="${pt.y}" r="3.5" fill="var(--surface-surface)" stroke="var(--color-shop-violet)" stroke-width="2">
-          <title>${pt.date}: ${money(pt.price)}</title>
+          <title>${escapeHTML(pt.date)}: ${money(pt.price)}</title>
         </circle>
-        <text x="${pt.x}" y="${height - 2}" font-size="8" fill="var(--color-muted-gray)" text-anchor="middle">${pt.date.slice(5)}</text>
+        <text x="${pt.x}" y="${height - 2}" font-size="8" fill="var(--color-muted-gray)" text-anchor="middle">${escapeHTML(pt.date.slice(5))}</text>
       `).join('')}
     </svg>
   `;
 }
 
-function closeSheet() {
+function closeSheet(updateURL = true) {
+  if (updateURL) {
+    const url = new URL(location.href);
+    url.searchParams.delete("product");
+    history.replaceState(null, "", url);
+  }
   const overlay = $('#overlay');
   overlay.classList.remove('is-open');
   document.body.style.overflow = '';
@@ -1300,7 +1168,7 @@ function closeCompareModal() {
 
 function renderCompareTable() {
   const container = $('#compare-table-container');
-  const ids = [...state.compare];
+  const ids = [...state.compare].filter(id => byId(id));
 
   if (!ids.length) {
     container.innerHTML = `<p class="empty">${t('compare.empty')}</p>`;
@@ -1324,12 +1192,12 @@ function renderCompareTable() {
             ${products.map(p => `
               <th class="matrix-col">
                 <div class="matrix-product-card">
-                  <button class="matrix-remove-btn" type="button" data-del-compare="${p.id}" aria-label="${t('compare.remove')}">
+                  <button class="matrix-remove-btn" type="button" data-del-compare="${escapeHTML(p.id)}" aria-label="${t('compare.remove')}">
                     <svg><use href="#i-close"/></svg>
                   </button>
-                  <img src="${p.thumbs[0]}" alt="" loading="lazy">
-                  <div class="matrix-product-brand">${p.brand}</div>
-                  <div class="matrix-product-title">${tr(p.title)}</div>
+                  <img src="${escapeHTML(p.thumbs[0])}" alt="" loading="lazy">
+                  <div class="matrix-product-brand">${escapeHTML(p.brand)}</div>
+                  <div class="matrix-product-title">${escapeHTML(tr(p.title))}</div>
                 </div>
               </th>`).join('')}
           </tr>
@@ -1340,43 +1208,43 @@ function renderCompareTable() {
             ${products.map(p => {
     const best = bestOffer(p);
     const plat = platformOf(best.platform);
-    return `<td class="matrix-col"><span class="matrix-val-price">${money(best.price)}</span><br><small style="color:var(--color-muted-gray)">${plat.name}</small></td>`;
+    return `<td class="matrix-col"><span class="matrix-val-price">${CATALOG_UNLOCKED ? (best.inStock ? money(best.price) : t('sheet.outOfStock')) : t('gate.pricesHidden')}</span><br><small style="color:var(--color-muted-gray)">${escapeHTML(plat.name)}</small></td>`;
   }).join('')}
           </tr>
           <tr>
             <td>${t('compare.param.range')}</td>
             ${products.map(p => {
     const range = priceRange(p);
-    return `<td class="matrix-col"><span class="matrix-val-text">${money(range.min)} – ${money(range.max)}</span></td>`;
+    return `<td class="matrix-col"><span class="matrix-val-text">${CATALOG_UNLOCKED && range.min > 0 ? `${money(range.min)} – ${money(range.max)}` : t('gate.pricesHidden')}</span></td>`;
   }).join('')}
           </tr>
           <tr>
             <td>${t('compare.param.savings')}</td>
             ${products.map(p => {
     const sav = savings(p);
-    return `<td class="matrix-col"><span class="matrix-val-savings">${formatSavings(sav.amount, sav.percent)}</span></td>`;
+    return `<td class="matrix-col"><span class="matrix-val-savings">${CATALOG_UNLOCKED ? formatSavings(sav.amount, sav.percent) : t('gate.pricesHidden')}</span></td>`;
   }).join('')}
           </tr>
           <tr>
             <td>${t('compare.param.platforms')}</td>
-            ${products.map(p => `<td class="matrix-col"><span class="matrix-val-text">${p.offers.length} ${t('sheet.offersTitle').toLowerCase()}</span></td>`).join('')}
+            ${products.map(p => `<td class="matrix-col"><span class="matrix-val-text">${offersCount(p)} ${t('sheet.offersTitle').toLowerCase()}</span></td>`).join('')}
           </tr>
           <tr>
             <td>${t('compare.param.inStock')}</td>
             ${products.map(p => {
     const stock = inStockCount(p);
-    return `<td class="matrix-col"><span class="matrix-val-text">${stock} / ${p.offers.length}</span></td>`;
+    return `<td class="matrix-col"><span class="matrix-val-text">${stock} / ${offersCount(p)}</span></td>`;
   }).join('')}
           </tr>
           <tr>
             <td>${t('compare.param.rating')}</td>
-            ${products.map(p => `<td class="matrix-col">${starsHTML(p.rating)} <span class="matrix-val-text">${p.rating} (${num(p.reviews)})</span></td>`).join('')}
+            ${products.map(p => `<td class="matrix-col">${starsHTML(p.rating)} <span class="matrix-val-text">${escapeHTML(p.rating)} (${num(p.reviews)})</span></td>`).join('')}
           </tr>
           <tr>
             <td>${t('compare.param.action')}</td>
             ${products.map(p => `
               <td class="matrix-col">
-                <button class="btn btn--primary" type="button" style="height:36px;font-size:13px;padding:0 16px;" data-open="${p.id}">
+                <button class="btn btn--primary" type="button" style="height:36px;font-size:13px;padding:0 16px;" data-open="${escapeHTML(p.id)}">
                   ${t('compare.viewOffers')}
                 </button>
               </td>`).join('')}
@@ -1384,7 +1252,7 @@ function renderCompareTable() {
         </tbody>
       </table>
     </div>
-    ${ids.length >= 2 ? `
+    ${CATALOG_UNLOCKED && ids.length >= 2 ? `
       <div style="margin-top:20px;padding:16px 20px;background:var(--color-success-bg);border:1px solid rgba(26,127,78,0.2);border-radius:var(--radius-2xl-2);display:flex;justify-content:space-between;align-items:center;">
         <div>
           <strong>${t('compare.totalBundle')}:</strong>
@@ -1498,7 +1366,7 @@ const AI_COPY = {
 };
 
 const aiText = key => AI_COPY[LANG]?.[key] ?? AI_COPY.uz[key];
-const escapeHTML = value => String(value).replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
+
 
 function assistantProduct(query) {
   const normalized = query.toLocaleLowerCase();
@@ -1589,7 +1457,7 @@ function renderAssistantContext() {
   }
   box.hidden = false;
   box.innerHTML = `
-    <img src="${product.image}" alt="">
+    <img src="${escapeHTML(safeURL(product.image))}" alt="">
     <div class="ai-context__text">
       <strong>${escapeHTML(`${product.brand} ${tr(product.title)}`)}</strong>
       <span>${escapeHTML(aiText('contextHint'))}</span>
@@ -1769,10 +1637,10 @@ async function showCabinet() {
 
   $('#cabinet-list').innerHTML = rows.length ? rows.map(r => `
     <div class="cab-row${r.reached ? ' is-reached' : ''}">
-      <button class="cab-row__open" type="button" data-open="${r.p.id}">
-        <img src="${r.p.thumbs[0] || r.p.image}" alt="" loading="lazy">
+      <button class="cab-row__open" type="button" data-open="${escapeHTML(r.p.id)}">
+        <img src="${escapeHTML(r.p.thumbs[0] || r.p.image)}" alt="" loading="lazy">
         <span class="cab-row__main">
-          <span class="cab-row__name">${r.p.brand} — ${tr(r.p.title)}</span>
+          <span class="cab-row__name">${escapeHTML(r.p.brand)} — ${escapeHTML(tr(r.p.title))}</span>
           <span class="cab-row__meta">${t('cabinet.now')} ${money(r.current)}</span>
         </span>
       </button>
@@ -1782,7 +1650,7 @@ async function showCabinet() {
              <span class="cab-row__gap${r.reached ? ' is-ok' : ''}">${r.reached ? t('cabinet.reached') : `${t('cabinet.left')} ${money(r.gap)}`}</span>`
       : `<span class="cab-row__gap">${t('cabinet.noGoal')}</span>`}
       </span>
-      <button class="cab-row__del" type="button" data-untrack="${r.p.id}" aria-label="${t('compare.remove')}">
+      <button class="cab-row__del" type="button" data-untrack="${escapeHTML(r.p.id)}" aria-label="${t('compare.remove')}">
         <svg><use href="#i-trash"/></svg>
       </button>
     </div>`).join('') : `<p class="empty">${t('cabinet.empty')}</p>`;
@@ -1818,7 +1686,7 @@ function switchCabTab(tab) {
 function fillProfileForm() {
   $('#prof-name').value = currentUser.name || '';
   $('#prof-region').innerHTML = REGIONS.map(r =>
-    `<option value="${r.id}"${r.id === currentUser.region ? ' selected' : ''}>${tr(r.name)}</option>`).join('');
+    `<option value="${escapeHTML(r.id)}"${r.id === currentUser.region ? ' selected' : ''}>${escapeHTML(tr(r.name))}</option>`).join('');
   $('#profile-msg').hidden = true;
   $('#password-msg').hidden = true;
 }
@@ -1829,19 +1697,19 @@ async function loadActivity() {
 
   $('#cabinet-viewed').innerHTML = data.viewed.length
     ? data.viewed.map(v => `
-        <button class="cab-mini" type="button" data-open="${v.id}">
-          <img src="${v.image}" alt="" loading="lazy">
+        <button class="cab-mini" type="button" data-open="${escapeHTML(v.id)}">
+          <img src="${escapeHTML(v.image)}" alt="" loading="lazy">
           <span class="cab-mini__text">
-            <span class="cab-mini__name">${v.brand} — ${v.title}</span>
-            <span class="cab-mini__date">${v.at.slice(0, 10)}</span>
+            <span class="cab-mini__name">${escapeHTML(v.brand)} — ${escapeHTML(v.title)}</span>
+            <span class="cab-mini__date">${escapeHTML(v.at.slice(0, 10))}</span>
           </span>
         </button>`).join('')
     : `<p class="cab-msg">${t('cabinet.noActivity')}</p>`;
 
   $('#cabinet-searches').innerHTML = data.searches.length
     ? data.searches.map(sq => `
-        <button class="cab-query" type="button" data-requery="${sq.query}">
-          <span>${sq.query}</span><span class="cab-mini__date">${sq.at.slice(0, 10)}</span>
+        <button class="cab-query" type="button" data-requery="${escapeHTML(sq.query)}">
+          <span>${escapeHTML(sq.query)}</span><span class="cab-mini__date">${escapeHTML(sq.at.slice(0, 10))}</span>
         </button>`).join('')
     : `<p class="cab-msg">${t('cabinet.noActivity')}</p>`;
 }
@@ -2013,6 +1881,7 @@ function watchHeroSearch() {
 const aiCache = new Map();
 
 async function loadAiPriceAdvisor(productId) {
+  const requestedLang = LANG;
   const container = $('#sheet-ai-advisor');
   if (!container) return;
 
@@ -2038,6 +1907,7 @@ async function loadAiPriceAdvisor(productId) {
     }
   }
 
+  if (openProductId !== productId || LANG !== requestedLang) return;
   if (!data || data.error) {
     container.hidden = true;
     return;
@@ -2077,6 +1947,7 @@ async function loadAiPriceAdvisor(productId) {
 }
 
 async function loadAiReviewsSummary(productId) {
+  const requestedLang = LANG;
   const container = $('#sheet-ai-reviews');
   if (!container) return;
 
@@ -2096,6 +1967,7 @@ async function loadAiReviewsSummary(productId) {
     }
   }
 
+  if (openProductId !== productId || LANG !== requestedLang) return;
   if (!data || data.error || !data.pros) {
     container.hidden = true;
     return;
@@ -2143,7 +2015,7 @@ async function loadAiCompareVerdict(productIds) {
     </div>
   `;
 
-  const cacheKey = `compare:${productIds.slice().sort().join(',')}:${LANG}`;
+  const cacheKey = `compare:${productIds.slice().sort().join(',')}:${LANG}:${CATALOG_UNLOCKED}`;
   let data = aiCache.get(cacheKey);
 
   if (!data) {
@@ -2253,7 +2125,7 @@ async function submitBundleBuilder(e) {
       <div class="bundle-results__list">
         ${(data.items || []).map(it => `
           <div class="bundle-product-card">
-            <img src="${it.image}" alt="${escapeHTML(it.title)}" loading="lazy">
+            <img src="${escapeHTML(it.image)}" alt="${escapeHTML(it.title)}" loading="lazy">
             <div class="bundle-product-card__info">
               <div class="bundle-product-card__brand">${escapeHTML(it.brand)}</div>
               <div class="bundle-product-card__title">${escapeHTML(it.title)}</div>
@@ -2593,6 +2465,7 @@ function wireEvents() {
 
 /* Полная перерисовка: используется при старте, смене языка и входе/выходе */
 function renderAll() {
+  if (!CATALOG_UNLOCKED && ['priceAsc', 'savingsDesc'].includes(state.sort)) state.sort = 'ratingDesc';
   applyStaticI18n();
   renderAuthUI();
   renderLangSwitch();
@@ -2607,6 +2480,8 @@ function renderAll() {
   renderCompareDrawer();
   renderAssistantUI();
   syncBadges();
+  if (!CATALOG_UNLOCKED && ['priceAsc', 'savingsDesc'].includes(state.sort)) state.sort = 'ratingDesc';
+  for (const opt of $('#sort-select').options) opt.disabled = !CATALOG_UNLOCKED && ['priceAsc', 'savingsDesc'].includes(opt.value);
   $('#sort-select').value = state.sort;
 
   // Блок результатов скрыт, но не пуст: после выхода в нём остались бы цены,
@@ -2618,6 +2493,7 @@ function renderAll() {
 
 async function boot() {
   document.documentElement.lang = t('html.lang');
+  applyStaticI18n();
   applyTheme(state.theme);
 
   try {
@@ -2634,12 +2510,24 @@ async function boot() {
 
   renderAll();
   wireEvents();
+  document.querySelectorAll('footer a[href="#"], #cookie a[href="#"]').forEach(link => {
+    link.addEventListener('click', event => { event.preventDefault(); toast(t('demo.notice')); });
+  });
   checkNotifications();
   primeAssistantHint();
+  const restoreProductURL = () => {
+    const id = new URL(location.href).searchParams.get('product');
+    if (id && byId(id)) openSheet(id, false);
+    else if (openProductId) closeSheet(false);
+  };
+  restoreProductURL();
+  window.addEventListener('popstate', restoreProductURL);
+  setInterval(() => { if (!document.hidden) checkNotifications(); }, 60000);
 
   if (!store.read('arzonol:cookies', null)) {
     setTimeout(() => { $('#cookie').hidden = false; }, 900);
   }
 }
 
+$('#boot-retry').addEventListener('click', () => location.reload());
 boot();

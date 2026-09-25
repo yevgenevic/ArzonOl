@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "ArzonOL Price Aggregator for Uzbekistan",
   "scripts": {
-    "dev": "node server.js",
-    "start": "node server.js"
+    "dev": "node server.js --reload",
+    "start": "node server.js",
+    "seed": "python3 backend/seed.py",
+    "test": "python3 -m unittest discover -s tests && node --test tests/frontend.test.js"
   }
 }

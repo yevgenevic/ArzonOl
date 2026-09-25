@@ -1,0 +1,11 @@
+backend/**
+tests/**
+.git/**
+.github/**
+.env*
+**/.env*
+**/*.db*
+**/*.sqlite*
+**/*.py
+README.md
+DESIGN.md

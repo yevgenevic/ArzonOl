@@ -12,11 +12,22 @@ const LANGS = [
 
 const TRANSLATIONS = {
   ru: {
+    "demo.notice": "Демо-версия: товары, цены и история вымышлены, изображения сгенерированы. Покупки и внешние уведомления недоступны.",
+    'ai.open': 'ИИ-помощник',
+    'ai.panelTitle': 'Помощник ArzonOL',
+    'ai.clear': 'Очистить разговор',
+    'ai.close': 'Закрыть помощника',
+    'ai.question': 'Вопрос помощнику ArzonOL',
+    'ai.send': 'Отправить вопрос',
+    "demo.offer": "Демо-предложение",
+    "chart.noHistory": "Недостаточно истории для графика",
+    "boot.retry": "Повторить загрузку",
+
     'html.lang': 'ru',
 
     'nav.home': 'Главная',
     'nav.catalog': 'Каталог',
-    'nav.favorites': 'Отслеживаемые',
+    'nav.favorites': 'Мои цены',
     'nav.compare': 'Сравнение',
     'nav.account': 'Аккаунт',
 
@@ -65,15 +76,15 @@ const TRANSLATIONS = {
     'cats.title': 'Категории',
     'cats.sub': 'Выберите раздел — откроется каталог',
     'bestsellers.title': 'Популярные товары',
-    'bestsellers.sub': 'С максимальной выгодой за месяц',
+    'bestsellers.sub': 'Подборка из демо-каталога',
 
-    'partners.badge': '⚡ 8 маркетплейсов · 120+ брендов',
+    'partners.badge': '⚡ Демонстрационные площадки и бренды',
     'partners.title': 'Маркетплейсы и бренды',
-    'partners.sub': 'Собираем актуальные предложения со всего Узбекистана',
+    'partners.sub': 'Примеры площадок и брендов для демонстрации сравнения',
 
     'sheet.close': 'Закрыть',
     'sheet.reviews': 'отзывов',
-    'sheet.desc': 'Сравните актуальные цены проверенных маркетплейсов Узбекистана и выберите самое выгодное предложение.',
+    'sheet.desc': 'Сравните демонстрационные цены и предложения разных площадок.',
     'sheet.bestPrice': 'Лучшая цена',
     'sheet.savingsPrefix': 'выгода до',
     'sheet.inStock': 'В наличии',
@@ -178,10 +189,10 @@ const TRANSLATIONS = {
     'cabinet.title': 'Личный кабинет',
     'cabinet.buyer': 'Покупатель',
     'sheet.close': 'Закрыть',
-    'auth.secureNote': 'Защищено шифрованием scrypt',
+    'auth.secureNote': 'Пароль хранится в защищённом виде',
     'gate.pricesHidden': 'Цены скрыты',
     'boot.error': 'Не удалось загрузить каталог.',
-    'boot.hint': 'Проверьте, что бэкенд запущен: uvicorn main:app --port 8000',
+    'boot.hint': 'Сервис временно недоступен. Попробуйте загрузить страницу ещё раз.',
     'footer.legal': 'Политика конфиденциальности · Условия · Демо-версия',
 
     'cookie.text': 'ArzonOL использует cookies, чтобы запоминать список сравнения и отслеживаемые товары. Подробнее — в',
@@ -225,11 +236,22 @@ const TRANSLATIONS = {
   },
 
   uz: {
+    "demo.notice": "Demo: mahsulotlar, narxlar va tarix namunaviy, rasmlar sunʼiy intellekt yordamida yaratilgan. Xaridlar va tashqi xabarnomalar mavjud emas.",
+    'ai.open': 'AI yordamchi',
+    'ai.panelTitle': 'ArzonOL yordamchisi',
+    'ai.clear': 'Suhbatni tozalash',
+    'ai.close': 'Yordamchini yopish',
+    'ai.question': 'ArzonOL yordamchisiga savol',
+    'ai.send': 'Savolni yuborish',
+    "demo.offer": "Demo taklif",
+    "chart.noHistory": "Grafik uchun tarix yetarli emas",
+    "boot.retry": "Qayta yuklash",
+
     'html.lang': 'uz',
 
     'nav.home': 'Bosh sahifa',
     'nav.catalog': 'Katalog',
-    'nav.favorites': 'Kuzatilayotganlar',
+    'nav.favorites': 'Narxlarim',
     'nav.compare': 'Taqqoslash',
     'nav.account': 'Akkaunt',
 
@@ -278,15 +300,15 @@ const TRANSLATIONS = {
     'cats.title': 'Kategoriyalar',
     'cats.sub': "Bo\'limni tanlang — katalog ochiladi",
     'bestsellers.title': 'Ommabop tovarlar',
-    'bestsellers.sub': 'Oy davomida eng katta tejamkorlik bilan',
+    'bestsellers.sub': 'Demo katalogdan tanlov',
 
-    'partners.badge': '⚡ 8 ta marketpleys · 120+ brend',
+    'partners.badge': '⚡ Demo savdo maydonchalari va brendlar',
     'partners.title': 'Marketpleyslar va brendlar',
-    'partners.sub': "Butun O\'zbekiston bo\'ylab dolzarb takliflarni to\'playmiz",
+    'partners.sub': 'Taqqoslash uchun namunaviy savdo maydonchalari va brendlar',
 
     'sheet.close': 'Yopish',
     'sheet.reviews': 'sharh',
-    'sheet.desc': "O\'zbekistonning ishonchli marketpleyslaridagi dolzarb narxlarni taqqoslang va eng maqbul taklifni tanlang.",
+    'sheet.desc': 'Turli savdo maydonchalarining namuna narxlari va takliflarini taqqoslang.',
     'sheet.bestPrice': 'Eng yaxshi narx',
     'sheet.savingsPrefix': 'foyda',
     'sheet.inStock': 'Mavjud',
@@ -391,10 +413,10 @@ const TRANSLATIONS = {
     'cabinet.title': 'Shaxsiy kabinet',
     'cabinet.buyer': 'Xaridor',
     'sheet.close': 'Yopish',
-    'auth.secureNote': 'scrypt xavfsiz shifrlash bilan himoyalangan',
+    'auth.secureNote': 'Parol himoyalangan holda saqlanadi',
     'gate.pricesHidden': 'Narxlar yopiq',
     'boot.error': "Katalogni yuklab bo'lmadi.",
-    'boot.hint': 'Backend ishga tushganini tekshiring: uvicorn main:app --port 8000',
+    'boot.hint': 'Xizmat vaqtincha mavjud emas. Sahifani qayta yuklab ko‘ring.',
     'footer.legal': 'Maxfiylik siyosati · Shartlar · Demo versiya',
 
     'cookie.text': "ArzonOL kuzatilayotgan va taqqoslash ro\'yxatlarini saqlash uchun cookies ishlatadi. Batafsil —",
@@ -438,11 +460,22 @@ const TRANSLATIONS = {
   },
 
   en: {
+    "demo.notice": "Demo: products, prices and history are fictional; images are AI-generated. Purchases and external notifications are unavailable.",
+    'ai.open': 'AI assistant',
+    'ai.panelTitle': 'ArzonOL assistant',
+    'ai.clear': 'Clear conversation',
+    'ai.close': 'Close assistant',
+    'ai.question': 'Question for the ArzonOL assistant',
+    'ai.send': 'Send question',
+    "demo.offer": "Demo offer",
+    "chart.noHistory": "Not enough history to draw a chart",
+    "boot.retry": "Retry loading",
+
     'html.lang': 'en',
 
     'nav.home': 'Home',
     'nav.catalog': 'Catalog',
-    'nav.favorites': 'Tracked prices',
+    'nav.favorites': 'Tracked',
     'nav.compare': 'Comparison',
     'nav.account': 'Account',
 
@@ -491,15 +524,15 @@ const TRANSLATIONS = {
     'cats.title': 'Categories',
     'cats.sub': 'Pick a section — the catalog opens',
     'bestsellers.title': 'Popular items',
-    'bestsellers.sub': 'With highest monthly savings',
+    'bestsellers.sub': 'A selection from the demo catalog',
 
-    'partners.badge': '⚡ 8 marketplaces · 120+ brands',
+    'partners.badge': '⚡ Demo marketplaces and brands',
     'partners.title': 'Marketplaces & brands',
-    'partners.sub': 'Aggregating live offers across Uzbekistan',
+    'partners.sub': 'Example marketplaces and brands for comparing offers',
 
     'sheet.close': 'Close',
     'sheet.reviews': 'reviews',
-    'sheet.desc': 'Compare live prices across verified Uzbek marketplaces and pick the best offer.',
+    'sheet.desc': 'Compare sample prices and offers from different marketplaces.',
     'sheet.bestPrice': 'Best price',
     'sheet.savingsPrefix': 'save up to',
     'sheet.inStock': 'In stock',
@@ -604,10 +637,10 @@ const TRANSLATIONS = {
     'cabinet.title': 'My Account',
     'cabinet.buyer': 'Buyer',
     'sheet.close': 'Close',
-    'auth.secureNote': 'Protected by scrypt encryption',
+    'auth.secureNote': 'Your password is stored securely',
     'gate.pricesHidden': 'Prices hidden',
     'boot.error': 'Could not load the catalog.',
-    'boot.hint': 'Check that the backend is running: uvicorn main:app --port 8000',
+    'boot.hint': 'The service is temporarily unavailable. Please try loading the page again.',
     'footer.legal': 'Privacy policy · Terms · Demo version',
 
     'cookie.text': 'ArzonOL uses cookies to save your tracked prices and comparison items. Read more in our',

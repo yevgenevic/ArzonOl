@@ -1,121 +1,61 @@
-"""Наполнение базы каталогом.
+"""Safely upsert the demo catalogue without deleting users or their activity.
 
-Данные берутся из assets/js/data.js через Node, а не переписываются руками:
-иначе фронтенд и база разъедутся при первой же правке каталога.
-Скрипт идемпотентный — можно запускать повторно.
+The fixture is server-only. Existing products, integration settings and history
+remain intact; rerunning this command adds missing data and updates descriptions.
 """
-
 import json
-import subprocess
-import sys
 from pathlib import Path
-
 from db import DB_PATH, connect, init_db
 
-ROOT = Path(__file__).resolve().parent.parent
-DATA_JS = ROOT / "assets" / "js" / "data.js"
 
-EXTRACT = """
-const fs = require('fs');
-const src = fs.readFileSync(process.argv[1], 'utf8');
-const res = eval(src + `; ({
-  CATEGORIES, PLATFORMS, REGIONS, PRODUCTS, PARTNERS,
-  history: PRODUCTS.map(p => ({ id: p.id, points: priceHistory(p) }))
-})`);
-process.stdout.write(JSON.stringify(res));
-"""
-
-
-def load_from_js() -> dict:
-    proc = subprocess.run(
-        ["node", "-e", EXTRACT, str(DATA_JS)],
-        capture_output=True, text=True, encoding="utf-8",
-    )
-    if proc.returncode != 0:
-        sys.exit(f"Не удалось прочитать data.js:\n{proc.stderr}")
-    return json.loads(proc.stdout)
-
-
-def seed() -> None:
+def seed():
     init_db()
-    data = load_from_js()
+    data = json.loads(Path(__file__).with_name('demo_catalog.json').read_text())
     conn = connect()
-
-    with conn:
-        # Каталог перезаливается целиком; пользователи и их данные не трогаются
-        conn.execute("DELETE FROM price_history")
-        conn.execute("DELETE FROM offers")
-        conn.execute("DELETE FROM product_images")
-        conn.execute("DELETE FROM products")
-        conn.execute("DELETE FROM categories")
-        conn.execute("DELETE FROM platforms")
-        conn.execute("DELETE FROM regions")
-
-        for i, c in enumerate(data["CATEGORIES"]):
-            conn.execute(
-                """INSERT INTO categories
-                   (id, icon, glyph, label_ru, label_uz, label_en, hint_ru, hint_uz, hint_en, position)
-                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                (c["id"], c["icon"], c.get("glyph", ""),
-                 c["label"]["ru"], c["label"]["uz"], c["label"]["en"],
-                 c["hint"]["ru"], c["hint"]["uz"], c["hint"]["en"], i),
-            )
-
-        for p in data["PLATFORMS"]:
-            conn.execute(
-                "INSERT INTO platforms (id, name, color, site_url) VALUES (?,?,?,?)",
-                (p["id"], p["name"], p["color"], p.get("url", "")),
-            )
-
-        for r in data["REGIONS"]:
-            conn.execute(
-                "INSERT INTO regions (id, name_ru, name_uz, name_en, delivery_bonus) VALUES (?,?,?,?,?)",
-                (r["id"], r["name"]["ru"], r["name"]["uz"], r["name"]["en"], r.get("offset", 0)),
-            )
-
-        for p in data["PRODUCTS"]:
-            conn.execute(
-                """INSERT INTO products
-                   (id, category_id, brand, title_ru, title_uz, title_en, rating, reviews, sold, image)
-                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                (p["id"], p["cat"], p["brand"],
-                 p["title"]["ru"], p["title"]["uz"], p["title"]["en"],
-                 p["rating"], p["reviews"], p["sold"], p["image"]),
-            )
-
-            for pos, path in enumerate(p.get("thumbs", [])):
-                conn.execute(
-                    "INSERT INTO product_images (product_id, path, position) VALUES (?,?,?)",
-                    (p["id"], path, pos),
-                )
-
-            for o in p["offers"]:
-                conn.execute(
-                    """INSERT INTO offers (product_id, platform_id, price, in_stock, delivery, url)
-                       VALUES (?,?,?,?,?,?)""",
-                    (p["id"], o["platform"], o["price"], 1 if o["inStock"] else 0,
-                     o["delivery"], o.get("url", "#")),
-                )
-
-        for h in data["history"]:
-            for pt in h["points"]:
-                conn.execute(
-                    "INSERT INTO price_history (product_id, period, price) VALUES (?,?,?)",
-                    (h["id"], pt["date"], pt["price"]),
-                )
-
-    counts = {
-        t: conn.execute(f"SELECT COUNT(*) c FROM {t}").fetchone()["c"]
-        for t in ("categories", "platforms", "regions", "products",
-                  "product_images", "offers", "price_history", "users")
-    }
-    conn.close()
-
-    # Вывод латиницей: консоль Windows здесь в cp1254 и падает на кириллице
-    print("db:", DB_PATH)
-    for t, n in counts.items():
-        print(f"  {t:<15} {n}")
+    try:
+        with conn:
+            for i, c in enumerate(data['CATEGORIES']):
+                conn.execute('''INSERT INTO categories
+                    (id,icon,glyph,label_ru,label_uz,label_en,hint_ru,hint_uz,hint_en,position)
+                    VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
+                    icon=excluded.icon,glyph=excluded.glyph,label_ru=excluded.label_ru,
+                    label_uz=excluded.label_uz,label_en=excluded.label_en,hint_ru=excluded.hint_ru,
+                    hint_uz=excluded.hint_uz,hint_en=excluded.hint_en,position=excluded.position''',
+                    (c['id'],c['icon'],c.get('glyph',''),*[c['label'][k] for k in ('ru','uz','en')],
+                     *[c['hint'][k] for k in ('ru','uz','en')],i))
+            for p in data['PLATFORMS']:
+                conn.execute('''INSERT INTO platforms (id,name,color,site_url) VALUES (?,?,?,?)
+                    ON CONFLICT(id) DO NOTHING''',(p['id'],p['name'],p['color'],p.get('url','')))
+            for r in data['REGIONS']:
+                conn.execute('''INSERT INTO regions (id,name_ru,name_uz,name_en,delivery_bonus)
+                    VALUES (?,?,?,?,?) ON CONFLICT(id) DO NOTHING''',
+                    (r['id'],*[r['name'][k] for k in ('ru','uz','en')],r.get('offset',0)))
+            for p in data['PRODUCTS']:
+                conn.execute('''INSERT INTO products
+                    (id,category_id,brand,title_ru,title_uz,title_en,rating,reviews,sold,image)
+                    VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
+                    category_id=excluded.category_id,brand=excluded.brand,title_ru=excluded.title_ru,
+                    title_uz=excluded.title_uz,title_en=excluded.title_en,image=excluded.image''',
+                    (p['id'],p['cat'],p['brand'],*[p['title'][k] for k in ('ru','uz','en')],
+                     p['rating'],p['reviews'],p['sold'],p['image']))
+                for pos,path in enumerate(p.get('thumbs',[])):
+                    conn.execute('''INSERT INTO product_images (product_id,path,position)
+                        SELECT ?,?,? WHERE NOT EXISTS
+                        (SELECT 1 FROM product_images WHERE product_id=? AND path=?)''',
+                        (p['id'],path,pos,p['id'],path))
+                for o in p['offers']:
+                    conn.execute('''INSERT INTO offers (product_id,platform_id,price,in_stock,delivery,url)
+                        SELECT ?,?,?,?,?,? WHERE NOT EXISTS
+                        (SELECT 1 FROM offers WHERE product_id=? AND platform_id=?)''',
+                        (p['id'],o['platform'],o['price'],int(o['inStock']),o['delivery'],o.get('url','#demo'),p['id'],o['platform']))
+            for h in data['history']:
+                for pt in h['points']:
+                    conn.execute('''INSERT INTO price_history (product_id,period,price) VALUES (?,?,?)
+                        ON CONFLICT(product_id,period) DO NOTHING''',(h['id'],pt['date'],pt['price']))
+        print('Demo catalogue ready:', DB_PATH)
+    finally:
+        conn.close()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     seed()

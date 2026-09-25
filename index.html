@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/css/styles.css">
+  <link rel="stylesheet" href="/assets/css/styles.css?v=2">
   <style>
     svg {
       width: 20px;
@@ -264,6 +264,7 @@
         </div>
 
         <div class="page">
+        <p class="demo-notice" role="note" data-i18n="demo.notice"></p>
           <h1 class="wordmark">
             <span class="wordmark__main">Arzon</span><span class="wordmark__ol"><img src="/assets/img/logo.png" alt="O"
                 class="wordmark__emblem-o">L</span>
@@ -495,7 +496,7 @@
         <div class="page">
           <div class="partners__head">
             <div class="partners__badge">
-              <span data-i18n="partners.badge">⚡ 8 маркетплейсов · 120+ брендов</span>
+              <span data-i18n="partners.badge">⚡ Демонстрационные площадки и бренды</span>
             </div>
             <h2 class="partners__title" id="partners-title" data-i18n="partners.title"></h2>
             <p class="partners__sub" data-i18n="partners.sub"></p>
@@ -825,7 +826,7 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <!-- ArzonOL AI: faqat katalog va xarid tanlovi bo'yicha maslahatchi -->
-  <button class="ai-fab" id="ai-assistant-toggle" type="button" aria-controls="ai-assistant" aria-expanded="false">
+  <button class="ai-fab" id="ai-assistant-toggle" type="button" aria-controls="ai-assistant" aria-expanded="false" data-i18n-attr="aria-label:ai.open,title:ai.open">
     <span class="ai-fab__ring" aria-hidden="true"></span>
     <span class="ai-fab__glyph" aria-hidden="true">
       <svg class="ai-fab__spark">
@@ -838,7 +839,7 @@
     <span class="ai-fab__hint" id="ai-fab-hint">Sizga nima yordam kerak?</span>
   </button>
 
-  <aside class="ai-assistant" id="ai-assistant" role="dialog" aria-label="ArzonOL AI maslahatchisi" aria-hidden="true">
+  <aside class="ai-assistant" id="ai-assistant" role="dialog" data-i18n-attr="aria-label:ai.panelTitle" aria-hidden="true">
     <header class="ai-assistant__head">
       <span class="ai-assistant__avatar" aria-hidden="true"><svg>
           <use href="#i-spark" />
@@ -847,10 +848,10 @@
         <strong id="ai-assistant-title">ArzonOL AI</strong>
         <span class="ai-assistant__status" id="ai-assistant-status">Xarid maslahatchisi</span>
       </div>
-      <button class="ai-assistant__act" id="ai-assistant-reset" type="button" aria-label="Suhbatni tozalash"><svg>
+      <button class="ai-assistant__act" id="ai-assistant-reset" type="button" data-i18n-attr="aria-label:ai.clear"><svg>
           <use href="#i-trash" />
         </svg></button>
-      <button class="ai-assistant__act" id="ai-assistant-close" type="button" aria-label="Yopish"><svg>
+      <button class="ai-assistant__act" id="ai-assistant-close" type="button" data-i18n-attr="aria-label:ai.close"><svg>
           <use href="#i-close" />
         </svg></button>
     </header>
@@ -870,10 +871,10 @@
     <div class="ai-assistant__prompts" id="ai-assistant-prompts"></div>
 
     <form class="ai-assistant__form" id="ai-assistant-form">
-      <label class="sr-only" for="ai-assistant-input">ArzonOL AI ga savol</label>
+      <label class="visually-hidden" for="ai-assistant-input" data-i18n="ai.question"></label>
       <input id="ai-assistant-input" type="text" maxlength="500" autocomplete="off"
         placeholder="Masalan: Samsung qayerda arzon?">
-      <button class="ai-assistant__send" type="submit" aria-label="Yuborish"><svg>
+      <button class="ai-assistant__send" type="submit" data-i18n-attr="aria-label:ai.send"><svg>
           <use href="#i-arrow-right" />
         </svg></button>
     </form>
@@ -969,7 +970,7 @@
           <svg>
             <use href="#i-shield" />
           </svg>
-          <span data-i18n="auth.secureNote">Защищено шифрованием scrypt</span>
+          <span data-i18n="auth.secureNote">Пароль защищён хешированием scrypt</span>
         </div>
       </form>
     </div>
@@ -1000,12 +1001,15 @@
   <div class="boot-error" id="boot-error" hidden>
     <p data-i18n="boot.error"></p>
     <code id="boot-error-detail"></code>
+    <button class="btn btn--primary" id="boot-retry" type="button" data-i18n="boot.retry"></button>
     <p data-i18n="boot.hint"></p>
   </div>
 
-  <script src="/assets/js/i18n.js"></script>
-  <script src="/assets/js/data.js"></script>
-  <script src="/assets/js/app.js"></script>
+  <script src="/assets/js/i18n.js?v=2"></script>
+  <script src="/assets/js/api.js?v=2"></script>
+  <script src="/assets/js/data.js?v=2"></script>
+  <script src="/assets/js/search.js?v=2"></script>
+  <script src="/assets/js/app.js?v=2"></script>
 </body>
 
 </html>

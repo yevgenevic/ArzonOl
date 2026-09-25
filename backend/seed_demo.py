@@ -1,7 +1,7 @@
 """Демонстрационные данные: пользователи, отслеживания, поисковые запросы.
 
 Отдельно от seed.py: тот заливает каталог, этот — жизнь вокруг него.
-Идемпотентный: полностью пересоздаёт пользовательские данные, каталог не трогает.
+Запускается только на пустой таблице пользователей; существующие данные сохраняет.
 
 Показательный аккаунт для демонстрации:  demo@arzonol.uz / demo1234
 """
@@ -68,12 +68,12 @@ def seed_demo() -> None:
     if not conn.execute("SELECT COUNT(*) c FROM products").fetchone()["c"]:
         raise SystemExit("Сначала заполните каталог: python seed.py")
 
-    with conn:
-        # Пользовательские данные пересоздаются целиком, каталог остаётся
-        for t in ("sessions", "tracked_products", "compare_items",
-                  "search_queries", "product_views", "users"):
-            conn.execute(f"DELETE FROM {t}")
+    if conn.execute("SELECT 1 FROM users LIMIT 1").fetchone():
+        conn.close()
+        print("Users already exist; demo users were not recreated.")
+        return
 
+    with conn:
         pwd = auth.hash_password(DEMO_PASSWORD)
         ids = []
         for i, (email, name, region, lang) in enumerate(USERS):

@@ -16,10 +16,9 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-ENV_PATHS = [
-    Path(__file__).resolve().parent / ".env",
-    Path(__file__).resolve().parent.parent / ".env",
-]
+import config  # Load local configuration once; never override explicit environment.
+from security import RateLimiter
+
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # По умолчанию используем openrouter/free или gemini, так как старые модели устаревают
@@ -42,22 +41,6 @@ STOPWORDS = {
 }
 
 
-def _load_env() -> None:
-    """Читает .env из backend/ или корня проекта."""
-    for p in ENV_PATHS:
-        if p.exists():
-            for line in p.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                key, value = line.split("=", 1)
-                os.environ[key.strip()] = value.strip().strip('"').strip("'")
-            break
-
-
-_load_env()
-
-
 def api_key() -> str:
     return os.environ.get("OPENROUTER_API_KEY", "").strip()
 
@@ -77,17 +60,11 @@ def is_configured() -> bool:
 # скрипт способен исчерпать дневной лимит бесплатной модели.
 # --------------------------------------------------------------------------
 
-_hits: dict[str, list[float]] = {}
+_limiter = RateLimiter(RATE_LIMIT, RATE_WINDOW)
 
 
 def rate_limited(client_ip: str) -> bool:
-    now = time.time()
-    window = [t for t in _hits.get(client_ip, []) if now - t < RATE_WINDOW]
-    _hits[client_ip] = window
-    if len(window) >= RATE_LIMIT:
-        return True
-    window.append(now)
-    return False
+    return _limiter.limited(client_ip)
 
 
 # --------------------------------------------------------------------------
@@ -477,7 +454,13 @@ def generate_comparison_verdict(db, product_ids: list[str], lang: str = "ru",
     try:
         raw = ask([{"role": "system", "content": sys_prompt}, {"role": "user", "content": user_msg}], max_tokens=700)
         parsed = _parse_json_reply(raw)
-        if isinstance(parsed, dict) and "key_differences" in parsed:
+        if (isinstance(parsed, dict) and isinstance(parsed.get("key_differences"), list)
+                and all(isinstance(v, str) for v in parsed["key_differences"])
+                and isinstance(parsed.get("best_value"), str)
+                and isinstance(parsed.get("recommendations"), list)
+                and all(isinstance(r, dict) and isinstance(r.get("title"), str)
+                        and isinstance(r.get("for_whom"), str)
+                        and r.get("product_id") in product_ids for r in parsed["recommendations"])):
             return parsed
     except Exception:
         pass
@@ -557,17 +540,28 @@ def generate_price_advice(db, product_id: str, lang: str = "ru") -> dict:
         "SELECT price, period FROM price_history WHERE product_id = ? ORDER BY period",
         (product_id,)
     ).fetchall()
-    history_prices = [r["price"] for r in history_rows]
+    history_prices = [r["price"] for r in history_rows if r["price"] > 0]
 
     if not min_current:
         return {
             "status": "out_of_stock",
             "badge": "Нет в наличии" if lang_code == "ru" else ("Mavjud emas" if lang_code == "uz" else "Out of stock"),
-            "advice": "Товара сейчас нет в наличии на складах. Рекомендуем подписаться на уведомление." if lang_code == "ru" else "Mahsulot omborlarda qolmagan. Narx tushishi xabarnomasiga obuna bo'ling.",
+            "advice": {"ru": "В демонстрационном каталоге нет доступных предложений.", "uz": "Demo katalogda mavjud takliflar yo‘q.", "en": "No offers are in stock in the demo catalogue."}[lang_code],
             "target_price": None,
             "min_price": None,
             "avg_price": None,
         }
+
+    if len(history_prices) < 2:
+        texts = {
+            "ru": ("Недостаточно данных", "Для оценки нужны как минимум две записи истории. Текущая цена сама по себе не означает скидку."),
+            "uz": ("Ma’lumot yetarli emas", "Baholash uchun kamida ikkita tarixiy narx kerak. Joriy narx chegirma borligini anglatmaydi."),
+            "en": ("Not enough data", "At least two historical observations are needed. The current price alone does not prove a discount."),
+        }
+        badge, advice = texts[lang_code]
+        return {"status": "insufficient_data", "badge": badge, "advice": advice,
+                "target_price": None, "min_price": min_current, "avg_price": None,
+                "diff_pct": None, "trend": None}
 
     avg_hist = sum(history_prices) // len(history_prices) if history_prices else min_current
     min_hist = min(history_prices) if history_prices else min_current
@@ -575,7 +569,7 @@ def generate_price_advice(db, product_id: str, lang: str = "ru") -> dict:
 
     diff_pct = round(((min_current - avg_hist) / avg_hist) * 100) if avg_hist else 0
 
-    if diff_pct <= -5 or min_current <= min_hist:
+    if diff_pct <= -5:
         status = "great_deal"
         trend = "down"
         suggested_target = int(min_current * 0.95 / 1000) * 1000
@@ -592,33 +586,33 @@ def generate_price_advice(db, product_id: str, lang: str = "ru") -> dict:
     if lang_code == "uz":
         if status == "great_deal":
             badge = "Xarid uchun ajoyib vaqt"
-            saving_pct = abs(diff_pct) if diff_pct < 0 else 10
-            advice = f"Ayni paytda eng past narx qayd etilgan (o'rtacha narxdan {saving_pct}% arzon). Hozir xarid qilish tavsiya etiladi!"
+            saving_pct = abs(diff_pct)
+            advice = f"Demo narx mavjud tarixdagi o'rtacha narxdan {saving_pct}% past. Bu kelajak narxi prognozi emas."
         elif status == "overpriced":
             badge = "Narx biroz oshgan"
-            advice = f"Joriy narx o'rtacha oylik darajadan {diff_pct}% yuqori. Narx {suggested_target:,} so'mga tushishini kutish va xabarnoma yoqishni tavsiya qilamiz.".replace(",", " ")
+            advice = f"Joriy narx mavjud tarixdagi o'rtacha darajadan {diff_pct}% yuqori. Narx {suggested_target:,} so'mga tushishini kutish va xabarnoma yoqishni tavsiya qilamiz.".replace(",", " ")
         else:
             badge = "Barqaror bozor narxi"
             advice = f"Narx o'rtacha bozor darajasida barqaror turibdi. Agar shoshilinch bo'lmasa, chegirma kutishingiz mumkin."
     elif lang_code == "en":
         if status == "great_deal":
             badge = "Great time to buy"
-            saving_pct = abs(diff_pct) if diff_pct < 0 else 10
-            advice = f"Current price is at a lowest point ({saving_pct}% below average). Highly recommended to buy now!"
+            saving_pct = abs(diff_pct)
+            advice = f"The demo price is {saving_pct}% below the average of the available history. This is not a price forecast."
         elif status == "overpriced":
             badge = "Currently overpriced"
-            advice = f"Price is {diff_pct}% above average monthly level. We suggest setting a price alert for {suggested_target:,} so'm.".replace(",", " ")
+            advice = f"Price is {diff_pct}% above average of the available history. We suggest setting a price alert for {suggested_target:,} so'm.".replace(",", " ")
         else:
             badge = "Fair market price"
             advice = f"Price is stable at the market average. Fair value with regular platform warranty."
     else:
         if status == "great_deal":
             badge = "Выгодный момент для покупки"
-            saving_pct = abs(diff_pct) if diff_pct < 0 else 10
-            advice = f"Текущая цена находится на минимуме (на {saving_pct}% выгоднее средней цены за месяц). Рекомендуем покупать сейчас!"
+            saving_pct = abs(diff_pct)
+            advice = f"Демонстрационная цена на {saving_pct}% ниже средней за доступный период. Это не прогноз будущих цен."
         elif status == "overpriced":
             badge = "Цена выше обычной"
-            advice = f"Сейчас цена выше среднемесячной на {diff_pct}%. Рекомендуем поставить уведомление на {suggested_target:,} сум и подождать снижения.".replace(",", " ")
+            advice = f"Сейчас цена выше средней за доступный период на {diff_pct}%. Рекомендуем поставить уведомление на {suggested_target:,} сум и подождать снижения.".replace(",", " ")
         else:
             badge = "Справедливая рыночная цена"
             advice = f"Цена держится на стабильном рыночном уровне. Честное соотношение стоимости без резких скачков."
@@ -688,7 +682,9 @@ def generate_reviews_summary(db, product_id: str, lang: str = "ru") -> dict:
     try:
         raw = ask([{"role": "system", "content": sys_prompt}, {"role": "user", "content": user_msg}], max_tokens=450)
         parsed = _parse_json_reply(raw)
-        if isinstance(parsed, dict) and "pros" in parsed and "cons" in parsed:
+        if (isinstance(parsed, dict) and isinstance(parsed.get("verdict"), str)
+                and all(isinstance(parsed.get(k), list) and all(isinstance(v, str) for v in parsed[k])
+                        for k in ("pros", "cons"))):
             parsed["satisfaction"] = satisfaction
             parsed["rating"] = rating
             parsed["reviews"] = reviews_count

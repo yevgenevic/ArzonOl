@@ -625,14 +625,14 @@ ul {
    -------------------------------------------------------------------------- */
 
 .hero {
-  padding: var(--spacing-40) 0 var(--spacing-48);
+  padding: var(--spacing-24) 0 var(--spacing-40);
 }
 
 .hero__stage {
   position: relative;
   z-index: 2;
-  height: 268px;
-  margin-bottom: -34px;
+  height: 220px;
+  margin-bottom: -24px;
   overflow: hidden;
   -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 10%, #000 90%, transparent 100%);
   mask-image: linear-gradient(90deg, transparent 0, #000 10%, #000 90%, transparent 100%);
@@ -699,7 +699,7 @@ ul {
 .orbit--bare img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .orbit--card {
@@ -720,7 +720,7 @@ ul {
 .orbit__media img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .orbit__meta {
@@ -771,7 +771,7 @@ ul {
   margin: 0 auto;
   /* Логотип набран одним словом и не переносится: на узком экране фиксированный
      кегль вылезает за свой блок и растягивает страницу вбок */
-  font-size: clamp(40px, 13vw, 88px);
+  font-size: clamp(40px, 10vw, 76px);
   line-height: 1;
   letter-spacing: -0.05em;
   font-weight: 800;
@@ -1321,7 +1321,7 @@ ul {
 .card__media img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .card__body {
@@ -1399,7 +1399,7 @@ ul {
   width: var(--spacing-48);
   height: var(--spacing-48);
   border-radius: var(--element-gap);
-  object-fit: cover;
+  object-fit: contain;
   background: var(--color-canvas-mist);
 }
 
@@ -1661,7 +1661,7 @@ ul {
 .sheet__media>img {
   width: 100%;
   aspect-ratio: 1 / 1;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: var(--radius-2xl-2);
   background: var(--color-canvas-mist);
 }
@@ -1675,7 +1675,7 @@ ul {
   width: var(--spacing-48);
   height: var(--spacing-48);
   border-radius: var(--element-gap);
-  object-fit: cover;
+  object-fit: contain;
   cursor: pointer;
   background: var(--color-canvas-mist);
   transition: transform 120ms ease;
@@ -1848,7 +1848,7 @@ ul {
 
 .offer-row {
   display: grid;
-  grid-template-columns: minmax(130px, 1.4fr) auto minmax(100px, 1fr) auto;
+  grid-template-columns: minmax(100px, 1fr) minmax(60px, .6fr) auto auto;
   align-items: center;
   gap: var(--spacing-10);
   padding: var(--spacing-8) var(--spacing-12);
@@ -1873,6 +1873,8 @@ ul {
 }
 
 .offer-row__platform {
+  min-width: 0;
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
   gap: var(--spacing-8);
@@ -1927,6 +1929,7 @@ ul {
 }
 
 .offer-row__btn {
+  max-width: 100%;
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-4);
@@ -4680,7 +4683,7 @@ ul {
   position: fixed;
   right: 24px;
   bottom: 24px;
-  z-index: 145;
+  z-index: 110;
   width: 60px;
   height: 60px;
   padding: 0;
@@ -6213,4 +6216,101 @@ ul {
 .catalog-drawer__item:hover .catalog-drawer__item-arrow {
   color: var(--color-shop-violet);
   transform: translateX(3px);
+}
+/* Persistent demo context, including narrow screens. */
+.demo-notice {
+  padding: 10px 14px;
+  margin: 12px 0 20px;
+  border: 1px solid var(--color-faint-border);
+  border-radius: 12px;
+  background: var(--surface-surface);
+  color: var(--color-muted-gray, #787574);
+  font-size: 12px;
+  line-height: 1.5;
+}
+#boot-error { z-index: 10000; }
+#boot-retry { margin: 16px; }
+
+/* Narrow layouts: search and product content take priority over decoration. */
+@media (max-width: 768px) {
+  .hero__stage { height: 180px; }
+  .controls-bar { padding: 14px; gap: 12px; }
+  .controls-bar__filters { display: grid; gap: 10px; overflow: visible; min-width: 0; }
+  .filter-pill { justify-content: center; min-height: 38px; }
+  .platform-chips {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .platform-chips::-webkit-scrollbar { display: none; }
+  .platform-chip { flex: none; min-height: 34px; padding: 7px 10px; white-space: nowrap; }
+}
+
+@media (max-width: 600px) {
+  .hero { padding: 12px 0 28px; }
+  .hero__stage { display: none; }
+  .wordmark { font-size: clamp(40px, 12vw, 54px); }
+  .hero__tagline { margin: 8px 0 24px; font-size: 14px; }
+  .demo-notice { margin: 4px 0 18px; }
+  .categories {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 18px;
+  }
+  .categories .pill { justify-content: center; min-width: 0; font-size: 14px; padding-right: 8px; }
+  .categories .pill:last-child { grid-column: 1 / -1; }
+  .cats__head { align-items: flex-start; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+  .cats__sub { font-size: 13px; }
+  .cat {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-content: center;
+    column-gap: 12px;
+    min-height: 100px;
+    padding: 16px;
+  }
+  .cat__blob { width: 130px; height: 130px; top: -45px; right: -35px; }
+  .cat__icon { grid-row: 1 / 3; align-self: center; }
+  .cat__name { margin-top: 0; font-size: 18px; }
+  .cat__meta { margin-top: 2px; }
+  .card__title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    min-height: 2.6em;
+  }
+  .card__foot { align-items: flex-start; flex-direction: column; gap: 5px; }
+  .card__price { font-size: 13px; line-height: 1.3; }
+  .price-locked { font-size: 12px; }
+  .card__rating { font-size: 10px; }
+  .card__strip { display: none; }
+  .card__badges { padding-top: 4px; }
+  .ai-fab {
+    top: 10px;
+    right: 98px;
+    bottom: auto;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--color-faint-border);
+    background: var(--surface-surface);
+    color: var(--color-shop-violet);
+    box-shadow: var(--shadow-sm);
+  }
+  .ai-fab__ring { display: none; }
+  .ai-fab__glyph svg { width: 18px; height: 18px; }
+  .ai-assistant {
+    top: 58px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    max-height: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .categories .pill { gap: 4px; font-size: 12px; }
 }
