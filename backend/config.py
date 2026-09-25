@@ -13,5 +13,6 @@ if os.environ.get("ARZONOL_LOAD_ENV", "1") == "1":
                     os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
             break
 
-DB_PATH = Path(os.environ.get("ARZONOL_DB_PATH", ROOT / "backend/arzonol.db"))
+_db_path = Path(os.environ.get("ARZONOL_DB_PATH", "backend/arzonol.db"))
+DB_PATH = _db_path if _db_path.is_absolute() else ROOT / _db_path
 SESSION_COOKIE = "arzonol_session"

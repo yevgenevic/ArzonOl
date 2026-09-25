@@ -14,7 +14,7 @@ function context() {
     localStorage:{getItem(){return null;},setItem(){},removeItem(){}},
     t:key=>key,tr:value=>value.ru,LANG:'ru'});
   for (const file of ['api.js','data.js','search.js','app.js']) {
-    let s=fs.readFileSync(path.join(root,'assets/js',file),'utf8');
+    let s=fs.readFileSync(path.join(root,'frontend/assets/js',file),'utf8');
     if (file==='app.js') s=s.replace(/\nboot\(\);\s*$/, '\n');
     vm.runInContext(s,c);
   }

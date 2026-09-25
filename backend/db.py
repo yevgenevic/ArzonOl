@@ -194,6 +194,38 @@ def migrate(conn: sqlite3.Connection) -> None:
         if column not in cols:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
 
+    # The demo images moved into category folders. Only rewrite exact paths from
+    # the old demo layout; custom product images keep their existing locations.
+    folders = {"f": "furniture", "t": "electronics", "q": "construction"}
+    for product in conn.execute("SELECT id, image FROM products").fetchall():
+        product_id = product["id"]
+        folder = folders.get(product_id[:1])
+        if (not folder or len(product_id) != 3 or not product_id[1:].isdigit()
+                or not 1 <= int(product_id[1:]) <= 12):
+            continue
+        old_base = f"/assets/img/products/{product_id}"
+        new_base = f"/assets/img/products/{folder}/{product_id}"
+        old_paths = {
+            f"{old_base}-{number}.jpg": f"{new_base}-{number}.jpg"
+            for number in (1, 2, 3)
+        }
+        if product["image"] == f"{old_base}.jpg":
+            conn.execute("UPDATE products SET image=? WHERE id=?", (f"{new_base}.jpg", product_id))
+        for image in conn.execute(
+            "SELECT id, path FROM product_images WHERE product_id=?", (product_id,)
+        ).fetchall():
+            new_path = old_paths.get(image["path"])
+            if not new_path:
+                continue
+            duplicate = conn.execute(
+                "SELECT 1 FROM product_images WHERE product_id=? AND path=?",
+                (product_id, new_path),
+            ).fetchone()
+            if duplicate:
+                conn.execute("DELETE FROM product_images WHERE id=?", (image["id"],))
+            else:
+                conn.execute("UPDATE product_images SET path=? WHERE id=?", (new_path, image["id"]))
+
 
 def init_db() -> None:
     conn = connect()

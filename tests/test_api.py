@@ -78,9 +78,41 @@ class APIRegressionTests(unittest.TestCase):
             self.assertEqual(set(platform), {'id','name','color','site_url'})
         self.assertNotIn('FAKE_TEST_SECRET', json.dumps(body))
         self.assertEqual(headers['Cache-Control'], 'no-store')
-        for path in ('/backend/.env','/backend/arzonol.db','/.git/config','/backend/demo_catalog.json','/assets/%2e%2e/backend/.env','/%2e%2e/etc/passwd','/assets/js/../../backend/demo_catalog.json'):
+        for path in ('/backend/.env','/backend/arzonol.db','/.git/config','/backend/data/demo_catalog.json','/frontend/index.html','/docs/arzonol-presentation.pdf','/assets/%2e%2e/backend/.env','/%2e%2e/etc/passwd','/assets/js/../../backend/data/demo_catalog.json'):
             self.assertEqual(self.request(path)[0], 404, path)
         self.assertNotIn('DEFAULT_PRODUCTS', self.request('/assets/js/data.js')[1])
+
+    def test_public_pages_and_product_images_survive_layout_change(self):
+        for path in ('/', '/admin', '/favicon.ico', '/assets/css/styles.css',
+                     '/assets/img/products/furniture/f01.jpg',
+                     '/assets/img/products/electronics/t01.jpg',
+                     '/assets/img/products/construction/q01.jpg'):
+            self.assertEqual(self.request(path)[0], 200, path)
+
+    def test_existing_demo_image_paths_migrate_without_touching_custom_paths(self):
+        with closing(sqlite3.connect(self.db)) as conn, conn:
+            conn.execute("UPDATE products SET image='/assets/img/products/f01.jpg' WHERE id='f01'")
+            conn.execute("UPDATE products SET image='/assets/img/custom/t01.jpg' WHERE id='t01'")
+            conn.execute("UPDATE product_images SET path='/assets/img/products/f01-1.jpg' "
+                         "WHERE product_id='f01' AND path='/assets/img/products/furniture/f01-1.jpg'")
+            conn.execute("INSERT INTO product_images(product_id,path,position) VALUES "
+                         "('f01','/assets/img/products/f01-2.jpg',1)")
+        subprocess.run([sys.executable, '-c', 'from db import init_db; init_db()'],
+                       cwd=ROOT/'backend', env=self.env, check=True)
+        with closing(sqlite3.connect(self.db)) as conn:
+            self.assertEqual(conn.execute("SELECT image FROM products WHERE id='f01'").fetchone()[0],
+                             '/assets/img/products/furniture/f01.jpg')
+            self.assertEqual(conn.execute("SELECT image FROM products WHERE id='t01'").fetchone()[0],
+                             '/assets/img/custom/t01.jpg')
+            for number in (1, 2):
+                new_path = f'/assets/img/products/furniture/f01-{number}.jpg'
+                old_path = f'/assets/img/products/f01-{number}.jpg'
+                self.assertEqual(conn.execute('SELECT COUNT(*) FROM product_images WHERE path=?',
+                                              (new_path,)).fetchone()[0], 1)
+                self.assertEqual(conn.execute('SELECT COUNT(*) FROM product_images WHERE path=?',
+                                              (old_path,)).fetchone()[0], 0)
+        subprocess.run([sys.executable, 'seed.py'], cwd=ROOT/'backend', env=self.env,
+                       check=True, stdout=subprocess.DEVNULL)
 
     def test_cookie_auth_and_access_control(self):
         status, body, headers = self.request('/api/auth/login', {'email':'person1@example.com','password':'TestPassword123'})

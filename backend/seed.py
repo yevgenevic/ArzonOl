@@ -10,7 +10,7 @@ from db import DB_PATH, connect, init_db
 
 def seed():
     init_db()
-    data = json.loads(Path(__file__).with_name('demo_catalog.json').read_text())
+    data = json.loads((Path(__file__).parent / 'data' / 'demo_catalog.json').read_text())
     conn = connect()
     try:
         with conn:

@@ -7,6 +7,8 @@ from config import ROOT
 from db import get_db, init_db
 import auth_routes, catalog_routes, profile_routes, admin_routes, ai_routes
 
+FRONTEND = ROOT / "frontend"
+
 @asynccontextmanager
 async def lifespan(app):
     init_db()
@@ -48,22 +50,22 @@ def health(db=Depends(get_db)):
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
-    return FileResponse(ROOT / "favicon.ico")
+    return FileResponse(FRONTEND / "favicon.ico")
 
 
 @app.get("/")
 def index():
-    return FileResponse(ROOT / "index.html")
+    return FileResponse(FRONTEND / "index.html")
 
 
 @app.get("/admin")
 def admin_page():
     # Сама страница отдаётся всем: данные она берёт из защищённого API
-    return FileResponse(ROOT / "admin.html")
+    return FileResponse(FRONTEND / "admin.html")
 
 
 
 for module in (auth_routes, catalog_routes, profile_routes, admin_routes, ai_routes):
     app.include_router(module.router)
 
-app.mount("/assets", StaticFiles(directory=ROOT / "assets"), name="assets")
+app.mount("/assets", StaticFiles(directory=FRONTEND / "assets"), name="assets")
