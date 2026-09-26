@@ -191,6 +191,7 @@ function renderAuthUI() {
 function applyTheme(theme) {
   state.theme = theme;
   document.documentElement.dataset.theme = theme;
+  document.querySelector('meta[name="theme-color"]').content = theme === 'dark' ? '#0e0f12' : '#f2f4f5';
   persist();
 }
 
@@ -226,17 +227,58 @@ const priceLabel = p => CATALOG_UNLOCKED
   ? (bestOffer(p).inStock ? formatPriceFrom(bestOffer(p).price) : escapeHTML(t('sheet.outOfStock')))
   : `<span class="price-locked">${t('gate.showPrices')}</span>`;
 
+const fill = (key, vars) => t(key).replace(/\{(\w+)\}/g, (_, k) => vars[k]);
+
+/* Ценник: для гостя — наличие по площадкам, после входа — цена и разброс по магазинам */
+function tagHTML(p) {
+  if (!CATALOG_UNLOCKED) {
+    const avail = p.availability || [];
+    const inStock = avail.filter(a => a.inStock).length;
+    // Монограмма в цвете магазина; нет в наличии — серая и зачёркнутая
+    const dots = avail.map(a => {
+      const plat = platformOf(a.platform);
+      return `<span class="tag__shop${a.inStock ? '' : ' is-out'}" style="--shop:${escapeHTML(plat.color)}" title="${escapeHTML(plat.name)}">${escapeHTML(plat.name.charAt(0))}</span>`;
+    }).join('');
+    return `
+      <div class="tag tag--locked">
+        <div class="tag__lock">${icon('lock')}${escapeHTML(t('gate.showPrices'))}</div>
+        <div class="tag__avail" aria-hidden="true">${dots}</div>
+        <div class="tag__legend"><span>${escapeHTML(fill('tag.inStock', { n: inStock, m: avail.length || offersCount(p) }))}</span></div>
+      </div>`;
+  }
+
+  const pool = (p.offers || []).filter(o => o && o.inStock);
+  if (!pool.length) {
+    return `<div class="tag tag--locked"><div class="tag__lock">${escapeHTML(t('sheet.outOfStock'))}</div></div>`;
+  }
+
+  const { min, max } = priceRange(p);
+  const best = bestOffer(p);
+  const span = max - min;
+  const ticks = pool
+    .filter(o => o !== best)
+    .map(o => `<span class="tag__tick" style="left:${span ? ((o.price - min) / span * 100).toFixed(1) : 0}%"></span>`)
+    .join('');
+  const digits = num(min).replace(/\s/g, ' ');
+  const from = `<span class="tag__unit">${escapeHTML(t('price.from'))}</span>`;
+  const gap = savings(p).percent;
+
+  return `
+    <div class="tag">
+      <div class="tag__price">
+        ${LANG === 'uz' ? '' : from}<span class="tag__num">${digits}</span><span class="tag__unit">${escapeHTML(t('currency'))}</span>${LANG === 'uz' ? from : ''}
+      </div>
+      <div class="tag__rail" aria-hidden="true">${ticks}<span class="tag__tick tag__tick--best" style="left:0"></span></div>
+      <div class="tag__legend">
+        <span>${escapeHTML(t('tag.cheapestAt'))} <b>${escapeHTML(platformOf(best.platform).name)}</b></span>
+        ${gap > 0 ? `<span class="tag__gap">${escapeHTML(fill('tag.gap', { n: gap }))}</span>` : ''}
+      </div>
+    </div>`;
+}
+
 function cardHTML(p, rank) {
   const on = state.favorites.has(p.id) ? ' is-on' : '';
   const badge = rank ? `<span class="card__rank" aria-hidden="true">${rank}</span>` : '';
-  const sav = savings(p);
-
-  const savingsTag = sav.amount > 0
-    ? `<span class="card__tag-savings">${t('badge.savings')} ${money(sav.amount)}</span>`
-    : '';
-
-  // offersCount известен и гостю — число площадок не секрет, секрет цены
-  const storesTag = `<span class="card__tag-stores">${offersCount(p)} ${t('badge.stores')}</span>`;
 
   return `
     <div class="card" data-id="${escapeHTML(p.id)}">
@@ -245,19 +287,14 @@ function cardHTML(p, rank) {
       <button class="card__open" type="button" data-open="${escapeHTML(p.id)}">
         <div class="card__media"><img src="${escapeHTML(p.image)}" alt="${escapeHTML(p.brand)} — ${escapeHTML(tr(p.title))}" loading="lazy"></div>
         <div class="card__body">
-          <div class="card__brand">${escapeHTML(p.brand)}</div>
-          <div class="card__title">${escapeHTML(tr(p.title))}</div>
-          <div class="card__foot">
-            <span class="card__price">${priceLabel(p)}</span>
+          <div class="card__meta">
+            <span class="card__brand">${escapeHTML(p.brand)}</span>
             <span class="card__rating">${starsHTML(p.rating)}<span>${num(p.reviews)}</span></span>
           </div>
+          <div class="card__title">${escapeHTML(tr(p.title))}</div>
         </div>
-        <div class="card__badges">
-          ${savingsTag}
-          ${storesTag}
-        </div>
+        ${tagHTML(p)}
       </button>
-      <div class="card__strip">${p.thumbs.map(s => `<img src="${escapeHTML(s)}" alt="" loading="lazy">`).join('')}</div>
     </div>`;
 }
 
@@ -361,8 +398,7 @@ function openCatalogModal() {
   const modal = $('#catalog-modal');
   if (!modal) return;
   lastFocused = document.activeElement;
-  modal.hidden = false;
-  requestAnimationFrame(() => modal.classList.add('is-open'));
+  revealOverlay(modal);
   document.body.classList.add('no-scroll');
   openDialog(modal);
 }
@@ -370,12 +406,10 @@ function openCatalogModal() {
 function closeCatalogModal() {
   const modal = $('#catalog-modal');
   if (!modal) return;
-  modal.classList.remove('is-open');
   closeDialog();
-  setTimeout(() => {
-    modal.hidden = true;
+  dismissOverlay(modal, 240, () => {
     document.body.classList.remove('no-scroll');
-  }, 240);
+  });
 }
 
 function renderCategories() {
@@ -444,24 +478,34 @@ const railHTML = inner => `
     <button class="scroller__arrow scroller__arrow--next" type="button" data-scroll="1" aria-label="${escapeHTML(t('search.submit'))}">${icon('chevron-right')}</button>
   </div>`;
 
-function renderPartners() {
-  const chip = (p, clone) => `
-    <div class="partner-card" style="--brand-color:${p.color}" ${clone ? 'aria-hidden="true"' : ''}>
-      <div class="partner-card__logo" style="background:${p.bg}">
-        <span class="partner-card__icon">${p.icon}</span>
-      </div>
-      <div class="partner-card__info">
-        <span class="partner-card__name">${escapeHTML(p.name)}</span>
-        <span class="partner-card__type">${escapeHTML(p.type)}</span>
-      </div>
-    </div>`;
+/* Буква на фирменном цвете: берём тот цвет текста, что контрастнее */
+function inkOn(hex) {
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return (lum + 0.05) / 0.05 > 1.05 / (lum + 0.05) ? '#000000' : '#ffffff';
+}
 
-  const track = $('#partners-track');
-  if (track) {
-    track.innerHTML =
-      PARTNERS.map(p => chip(p, false)).join('') +
-      PARTNERS.map(p => chip(p, true)).join('');
-  }
+function renderPartners() {
+  const box = $('#partners-groups');
+  if (!box) return;
+
+  const chip = p => `
+    <li class="brand-chip">
+      <span class="brand-chip__mark" style="background:${escapeHTML(p.color)};color:${inkOn(p.color)}" aria-hidden="true">${escapeHTML(p.name.charAt(0))}</span>
+      <span class="brand-chip__name">${escapeHTML(p.name)}</span>
+    </li>`;
+
+  const group = (kind, label) => {
+    const items = PARTNERS.filter(p => p.kind === kind);
+    return `
+      <div class="partners__group">
+        <h3 class="partners__group-title">${escapeHTML(t(label))}<span class="partners__group-count">${items.length}</span></h3>
+        <ul class="partners__chips">${items.map(chip).join('')}</ul>
+      </div>`;
+  };
+
+  box.innerHTML = group('market', 'partners.markets') + group('brand', 'partners.brands');
 }
 
 function initScroller(scroller) {
@@ -489,7 +533,20 @@ function initScroller(scroller) {
    Сортировка и фильтрация
    -------------------------------------------------------------------------- */
 
+/* Нижний бар должен показывать, где пользователь сейчас */
+function setRailActive(selector) {
+  $$('#rail .rail__link').forEach(b => {
+    const on = b.matches(selector);
+    b.classList.toggle('is-active', on);
+    on ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
+  });
+}
+
+/* Полный футер — только на главной; на остальных экранах остаётся оговорка о ценах */
+const setFooterCompact = on => $('.footer')?.classList.toggle('is-compact', on);
+
 function applyView() {
+  setRailActive(state.filter ? '[data-open-catalog]' : '[data-nav="home"]');
   const results = $('#results');
   const sections = $('#sections');
 
@@ -498,6 +555,7 @@ function applyView() {
     sections.hidden = false;
     $('#cats').hidden = false;
     $('#cabinet').hidden = true;
+    setFooterCompact(false);
     renderSections();
     return;
   }
@@ -520,6 +578,9 @@ function applyView() {
 }
 
 function renderResults(title, items, emptyText) {
+  setFooterCompact(true);
+  disarmClear();
+  $('#results-clear').hidden = true;
   $('#results-title').textContent = title;
   $('#results-count').textContent = `${items.length} ${plural(items.length)}`;
   $('#results-grid').innerHTML = items.length
@@ -533,18 +594,57 @@ function renderResults(title, items, emptyText) {
   $('#results').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function renderSuggest(q, box) {
-  const hits = search(q).slice(0, 6);
-  if (!hits.length) { box.hidden = true; box.innerHTML = ''; return; }
+/* История поиска — персонализация, поэтому хранится только при согласии «Принять всё» */
+const RECENT_KEY = 'arzonol:recent-searches';
+const canRemember = () => store.read('arzonol:cookies', null) === 'accept';
+const recentSearches = () => (canRemember() ? store.read(RECENT_KEY, []) : []);
 
-  box.innerHTML = hits.map(p => `
+function rememberSearch(q) {
+  if (!canRemember() || !q) return;
+  const list = [q, ...recentSearches().filter(s => s.toLowerCase() !== q.toLowerCase())].slice(0, 5);
+  store.write(RECENT_KEY, list);
+}
+
+const suggestItemHTML = p => `
     <button class="suggest__item" type="button" data-suggest="${escapeHTML(p.id)}" role="option">
       <img class="suggest__thumb" src="${escapeHTML(p.thumbs[0])}" alt="" loading="lazy">
       <span>
         <span class="suggest__title">${escapeHTML(tr(p.title))}</span><br>
         <span class="suggest__brand">${escapeHTML(p.brand)} · ${priceLabel(p)}</span>
       </span>
-    </button>`).join('');
+    </button>`;
+
+const popularProducts = () => [...PRODUCTS].sort((a, b) => (b.sold || 0) - (a.sold || 0)).slice(0, 4);
+
+function renderSuggest(q, box) {
+  const query = q.trim();
+  const popular = () => popularProducts().map(suggestItemHTML).join('');
+
+  if (!query) {
+    const recent = recentSearches();
+    box.innerHTML = `
+      ${recent.length ? `
+        <div class="suggest__group" role="group" aria-label="${escapeHTML(t('suggest.recent'))}">
+          <div class="suggest__label" aria-hidden="true">${escapeHTML(t('suggest.recent'))}</div>
+          <div class="suggest__chips">${recent.map(s =>
+            `<button class="suggest__chip" type="button" role="option" data-recent="${escapeHTML(s)}">${escapeHTML(s)}</button>`).join('')}</div>
+        </div>` : ''}
+      <div class="suggest__group" role="group" aria-label="${escapeHTML(t('suggest.popular'))}">
+        <div class="suggest__label" aria-hidden="true">${escapeHTML(t('suggest.popular'))}</div>
+        ${popular()}
+      </div>`;
+    box.hidden = !PRODUCTS.length;
+    return;
+  }
+
+  const hits = search(query).slice(0, 6);
+  box.innerHTML = hits.length
+    ? hits.map(suggestItemHTML).join('')
+    : `<p class="suggest__empty" role="status">${escapeHTML(fill('suggest.nothing', { q: query }))}</p>
+       <div class="suggest__group" role="group" aria-label="${escapeHTML(t('suggest.popular'))}">
+         <div class="suggest__label" aria-hidden="true">${escapeHTML(t('suggest.popular'))}</div>
+         ${popular()}
+       </div>`;
   box.hidden = false;
 }
 
@@ -737,6 +837,41 @@ function trapFocus(e, dialog) {
 
 let activeDialog = null;
 
+// An overlay can be reopened while its exit transition is still running.
+// Cancel the stale hide so the transition retargets from its current frame.
+const overlayCloseTimers = new WeakMap();
+const overlayOpenFrames = new WeakMap();
+
+function revealOverlay(overlay) {
+  clearTimeout(overlayCloseTimers.get(overlay));
+  cancelAnimationFrame(overlayOpenFrames.get(overlay));
+  overlayCloseTimers.delete(overlay);
+  delete overlay.dataset.closing;
+  overlay.hidden = false;
+  overlayOpenFrames.set(overlay, requestAnimationFrame(() => {
+    overlayOpenFrames.delete(overlay);
+    if (!overlay.hidden) overlay.classList.add('is-open');
+  }));
+}
+
+function dismissOverlay(overlay, delay = 200, onHidden) {
+  cancelAnimationFrame(overlayOpenFrames.get(overlay));
+  overlayOpenFrames.delete(overlay);
+  clearTimeout(overlayCloseTimers.get(overlay));
+  overlay.dataset.closing = 'true';
+  overlay.classList.remove('is-open');
+  overlayCloseTimers.set(overlay, setTimeout(() => {
+    overlayCloseTimers.delete(overlay);
+    if (overlay.classList.contains('is-open')) return;
+    overlay.hidden = true;
+    onHidden?.();
+  }, delay));
+}
+
+// Открыто касанием или мышью — фокус на само окно, без обводки крестика.
+// С клавиатуры — как раньше, на первый элемент.
+let openedByPointer = false;
+
 function openDialog(dialog) {
   closeAssistant();
   activeDialog = dialog;
@@ -744,8 +879,14 @@ function openDialog(dialog) {
   $('.topnav')?.setAttribute('inert', '');
   // ждём кадр: до снятия hidden элементы ещё не имеют размеров
   requestAnimationFrame(() => {
+    if (activeDialog !== dialog || dialog.dataset.closing) return;
     const first = focusablesIn(dialog)[0];
-    (first || dialog).focus?.();
+    if (openedByPointer || !first) {
+      if (!dialog.hasAttribute('tabindex')) dialog.setAttribute('tabindex', '-1');
+      dialog.focus({ preventScroll: true });
+    } else {
+      first.focus();
+    }
   });
 }
 
@@ -761,10 +902,15 @@ function closeDialog() {
    сверяемся с фактическим состоянием окон. */
 function syncDialogState() {
   // .map($) передал бы индекс во второй параметр $ (root) — отсюда обёртка
-  const open = ['#auth-modal', '#alert-modal', '#compare-modal', '#bundle-modal', '#catalog-modal', '#overlay'].map(sel => $(sel)).find(el => el && !el.hidden)
+  const open = ['#auth-modal', '#alert-modal', '#compare-modal', '#bundle-modal', '#catalog-modal', '#overlay'].map(sel => $(sel)).find(el => el && !el.hidden && !el.dataset.closing)
     || ($('#drawer').classList.contains('is-open') ? $('#drawer') : null);
   if (!open && activeDialog) closeDialog();
   else if (open) activeDialog = open;
+}
+
+function isOverlayActive(selector) {
+  const overlay = $(selector);
+  return overlay && !overlay.hidden && !overlay.dataset.closing;
 }
 
 function openSheet(id, updateURL = true) {
@@ -781,8 +927,7 @@ function openSheet(id, updateURL = true) {
   fillSheet(p);
 
   const overlay = $('#overlay');
-  overlay.hidden = false;
-  requestAnimationFrame(() => overlay.classList.add('is-open'));
+  revealOverlay(overlay);
   document.body.style.overflow = 'hidden';
   openDialog(overlay);
 
@@ -1003,10 +1148,9 @@ function closeSheet(updateURL = true) {
     history.replaceState(null, "", url);
   }
   const overlay = $('#overlay');
-  overlay.classList.remove('is-open');
+  dismissOverlay(overlay, 240);
   document.body.style.overflow = '';
   openProductId = null;
-  setTimeout(() => { overlay.hidden = true; }, 200);
   closeDialog();
 
   renderAssistantContext();
@@ -1043,16 +1187,14 @@ function openAuthModal(mode = 'register') {
   $('#auth-form').reset();
   $('#auth-password').type = 'password';
 
-  modal.hidden = false;
-  requestAnimationFrame(() => modal.classList.add('is-open'));
+  revealOverlay(modal);
   document.body.style.overflow = 'hidden';
   openDialog(modal);
 }
 
 function closeAuthModal() {
   const modal = $('#auth-modal');
-  modal.classList.remove('is-open');
-  setTimeout(() => { modal.hidden = true; }, 200);
+  dismissOverlay(modal, 260);
 
   // Под входом может лежать открытая карточка товара: тогда фон остаётся
   // заблокированным, а активным диалогом снова становится она
@@ -1104,20 +1246,20 @@ function openAlertModal(productId) {
   const best = bestOffer(p);
   $('#alert-target-price').value = Math.round(best.price * 0.9);
   const modal = $('#alert-modal');
-  modal.hidden = false;
-  requestAnimationFrame(() => modal.classList.add('is-open'));
+  revealOverlay(modal);
   // подписка открывается поверх карточки товара — запоминаем, куда вернуть фокус
   alertOpener = document.activeElement;
   activeDialog = modal;
-  requestAnimationFrame(() => focusablesIn(modal)[0]?.focus());
+  requestAnimationFrame(() => {
+    if (activeDialog === modal && !modal.dataset.closing) focusablesIn(modal)[0]?.focus();
+  });
 }
 
 let alertOpener = null;
 
 function closeAlertModal() {
   const modal = $('#alert-modal');
-  modal.classList.remove('is-open');
-  setTimeout(() => { modal.hidden = true; }, 200);
+  dismissOverlay(modal, 240);
   // возвращаемся в карточку товара, если она ещё открыта
   activeDialog = openProductId ? $('#overlay') : null;
   alertOpener?.focus();
@@ -1152,17 +1294,15 @@ function openCompareModal() {
   renderCompareTable();
   lastFocused = opener;
   const modal = $('#compare-modal');
-  modal.hidden = false;
-  requestAnimationFrame(() => modal.classList.add('is-open'));
+  revealOverlay(modal);
   document.body.style.overflow = 'hidden';
   openDialog(modal);
 }
 
 function closeCompareModal() {
   const modal = $('#compare-modal');
-  modal.classList.remove('is-open');
+  dismissOverlay(modal, 240);
   document.body.style.overflow = '';
-  setTimeout(() => { modal.hidden = true; }, 200);
   closeDialog();
 }
 
@@ -1600,6 +1740,40 @@ function setRegion(regionId) {
 function showFavorites() {
   const items = PRODUCTS.filter(p => state.favorites.has(p.id));
   renderResults(t('results.favorites'), items, t('empty.favorites'));
+  $('#results-clear').hidden = !items.length;
+  setRailActive('[data-nav="favorites"]');
+}
+
+/* Очистка списка — в два нажатия: первое спрашивает, второе удаляет */
+let clearArmTimer = null;
+
+function disarmClear() {
+  clearTimeout(clearArmTimer);
+  const btn = $('#results-clear');
+  if (!btn || !btn.classList.contains('is-armed')) return;
+  btn.classList.remove('is-armed');
+  $('span', btn).textContent = t('favorites.clear');
+}
+
+function clearFavorites() {
+  const btn = $('#results-clear');
+  if (!btn.classList.contains('is-armed')) {
+    btn.classList.add('is-armed');
+    $('span', btn).textContent = fill('favorites.clearConfirm', { n: state.favorites.size });
+    clearArmTimer = setTimeout(disarmClear, 4000);
+    return;
+  }
+
+  const ids = [...state.favorites];
+  state.favorites.clear();
+  persist();
+  if (currentUser) {
+    Promise.all(ids.map(id => api(`/api/tracked/${encodeURIComponent(id)}`, { method: 'DELETE' })))
+      .catch(err => console.error('Не удалось очистить отслеживание:', err));
+  }
+  syncBadges();
+  showFavorites();
+  toast(t('toast.favCleared'));
 }
 
 /* --------------------------------------------------------------------------
@@ -1673,6 +1847,8 @@ async function showCabinet() {
   if (partners) partners.hidden = true;
 
   $('#cabinet').hidden = false;
+  setRailActive('[data-nav="account"]');
+  setFooterCompact(true);
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
@@ -1822,7 +1998,7 @@ function wireSearch({ form, input, clear, suggest }) {
     renderSuggest(el.value, box);
   });
 
-  el.addEventListener('focus', () => { if (el.value) renderSuggest(el.value, box); });
+  el.addEventListener('focus', () => renderSuggest(el.value, box));
 
   $(clear).addEventListener('click', () => {
     state.query = '';
@@ -1839,6 +2015,7 @@ function wireSearch({ form, input, clear, suggest }) {
 
     // Аналитика спроса пишется и для гостей — регистрация для неё не нужна
     if (state.query) {
+      rememberSearch(state.query);
       api('/api/analytics/search', {
         method: 'POST',
         body: { query: state.query, results: search(state.query).length, lang: LANG },
@@ -2077,8 +2254,7 @@ function openBundleModal(defaultQuery = '', defaultBudget = null) {
   if (defaultQuery) $('#bundle-query-input').value = defaultQuery;
   if (defaultBudget) $('#bundle-budget-input').value = defaultBudget;
 
-  modal.hidden = false;
-  requestAnimationFrame(() => modal.classList.add('is-open'));
+  revealOverlay(modal);
   document.body.style.overflow = 'hidden';
   openDialog(modal);
 }
@@ -2086,8 +2262,7 @@ function openBundleModal(defaultQuery = '', defaultBudget = null) {
 function closeBundleModal() {
   const modal = $('#bundle-modal');
   if (!modal) return;
-  modal.classList.remove('is-open');
-  setTimeout(() => { modal.hidden = true; }, 200);
+  dismissOverlay(modal);
   document.body.style.overflow = '';
   closeDialog();
 }
@@ -2152,7 +2327,49 @@ async function submitBundleBuilder(e) {
   }
 }
 
+/* Неквадратное фото в квадратной рамке показываем целиком, а каждую свободную
+   полосу закрашиваем средним цветом того края снимка, к которому она примыкает */
+const PHOTO_SELECTOR = '.card__media img, .orbit__media img, .orbit--bare img, .sheet__photo > img';
+const edgeFills = new Map();
+
+function edgeFill(img) {
+  if (edgeFills.has(img.src)) return edgeFills.get(img.src);
+  const wide = img.naturalWidth > img.naturalHeight;
+  const w = 48, h = Math.max(1, Math.round(48 * img.naturalHeight / img.naturalWidth));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, w, h);
+  const average = d => {
+    const sum = [0, 0, 0];
+    for (let i = 0; i < d.length; i += 4) { sum[0] += d[i]; sum[1] += d[i + 1]; sum[2] += d[i + 2]; }
+    return `rgb(${sum.map(v => Math.round(v / (d.length / 4))).join(' ')})`;
+  };
+  const [first, last] = wide
+    ? [ctx.getImageData(0, 0, w, 1).data, ctx.getImageData(0, h - 1, w, 1).data]
+    : [ctx.getImageData(0, 0, 1, h).data, ctx.getImageData(w - 1, 0, 1, h).data];
+  const fill = `linear-gradient(${wide ? 'to bottom' : 'to right'}, ${average(first)} 50%, ${average(last)} 50%)`;
+  edgeFills.set(img.src, fill);
+  return fill;
+}
+
+function fitPhoto(img) {
+  const { naturalWidth: w, naturalHeight: h } = img;
+  const letterboxed = w > 0 && Math.abs(w - h) / Math.max(w, h) > 0.02;
+  img.classList.toggle('is-letterboxed', letterboxed);
+  img.parentElement.style.background = letterboxed ? edgeFill(img) : '';
+}
+
 function wireEvents() {
+  // load не всплывает, поэтому ловим его на фазе перехвата
+  document.addEventListener('load', e => {
+    if (e.target instanceof HTMLImageElement && e.target.matches(PHOTO_SELECTOR)) fitPhoto(e.target);
+  }, true);
+
+  document.addEventListener('pointerdown', () => { openedByPointer = true; }, true);
+  document.addEventListener('keydown', () => { openedByPointer = false; }, true);
+
   document.addEventListener('click', e => {
     const assistantToggle = e.target.closest('#ai-assistant-toggle');
     if (assistantToggle) {
@@ -2247,9 +2464,22 @@ function wireEvents() {
       return;
     }
 
+    if (e.target.closest('#results-clear')) {
+      clearFavorites();
+      return;
+    }
+
     // showCabinet сам откроет окно входа, если пользователь не авторизован
     if (e.target.closest('[data-nav="account"]')) {
       showCabinet();
+      return;
+    }
+
+    const recent = e.target.closest('[data-recent]');
+    if (recent) {
+      const input = recent.closest('.topnav__search') ? $('#q-top') : $('#q');
+      syncSearchInputs(recent.dataset.recent);
+      input.form.requestSubmit();
       return;
     }
 
@@ -2427,15 +2657,14 @@ function wireEvents() {
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-      // Открытость проверяем по hidden, а не по .is-open: класс навешивается
-      // внутри requestAnimationFrame, и завязывать на него закрытие окна значит
-      // ставить работоспособность в зависимость от кадра отрисовки.
+      // Закрывающееся окно ещё видно до конца перехода, но уже не активно.
       if ($('#ai-assistant').classList.contains('is-open')) closeAssistant();
-      else if (!$('#catalog-modal').hidden) closeCatalogModal();
-      else if (!$('#auth-modal').hidden) closeAuthModal();
-      else if (!$('#alert-modal').hidden) closeAlertModal();
-      else if (!$('#compare-modal').hidden) closeCompareModal();
-      else if (!$('#overlay').hidden) closeSheet();
+      else if (isOverlayActive('#catalog-modal')) closeCatalogModal();
+      else if (isOverlayActive('#auth-modal')) closeAuthModal();
+      else if (isOverlayActive('#alert-modal')) closeAlertModal();
+      else if (isOverlayActive('#compare-modal')) closeCompareModal();
+      else if (isOverlayActive('#bundle-modal')) closeBundleModal();
+      else if (isOverlayActive('#overlay')) closeSheet();
       else if ($('#drawer').classList.contains('is-open')) closeCompareDrawer();
       else hideSuggests();
     }
@@ -2454,7 +2683,7 @@ function wireEvents() {
       store.write('arzonol:cookies', btn.dataset.cookie);
       const bar = $('#cookie');
       bar.classList.add('is-hiding');
-      setTimeout(() => { bar.hidden = true; }, 240);
+      setTimeout(() => { bar.hidden = true; }, 180);
     });
   });
 }

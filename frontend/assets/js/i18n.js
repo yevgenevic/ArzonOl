@@ -42,6 +42,12 @@ const TRANSLATIONS = {
     'price.from': 'от',
     'badge.savings': 'Выгода до',
     'badge.stores': 'площадок',
+    'tag.cheapestAt': 'Дешевле всего на',
+    'suggest.recent': 'Вы искали',
+    'suggest.popular': 'Чаще всего покупают',
+    'suggest.nothing': 'По запросу «{q}» ничего нет. Проверьте написание или посмотрите популярное:',
+    'tag.gap': 'разница до {n}%',
+    'tag.inStock': 'В наличии: {n} из {m}',
 
     'sort.label': 'Сортировка:',
     'sort.priceAsc': 'Сначала выгодные',
@@ -78,8 +84,9 @@ const TRANSLATIONS = {
     'bestsellers.title': 'Популярные товары',
     'bestsellers.sub': 'Подборка из демо-каталога',
 
-    'partners.badge': '⚡ Демонстрационные площадки и бренды',
-    'partners.title': 'Маркетплейсы и бренды',
+    'partners.title': 'Где сравниваем цены',
+    'partners.markets': 'Маркетплейсы',
+    'partners.brands': 'Бренды',
     'partners.sub': 'Примеры площадок и брендов для демонстрации сравнения',
 
     'sheet.close': 'Закрыть',
@@ -119,6 +126,9 @@ const TRANSLATIONS = {
 
     'toast.favOn': 'Товар добавлен в отслеживание цен',
     'toast.favOff': 'Товар убран из отслеживания цен',
+    'toast.favCleared': 'Список отслеживания очищен',
+    'favorites.clear': 'Очистить',
+    'favorites.clearConfirm': 'Удалить все ({n})?',
     'toast.compareOn': 'Товар добавлен к сравнению',
     'toast.compareOff': 'Товар убран из сравнения',
     'toast.compareCleared': 'Список сравнения очищен',
@@ -266,6 +276,12 @@ const TRANSLATIONS = {
     'price.from': 'dan',
     'badge.savings': 'Foyda',
     'badge.stores': 'maydon',
+    'tag.cheapestAt': 'Eng arzoni:',
+    'suggest.recent': 'Siz qidirgansiz',
+    'suggest.popular': 'Eng ko‘p sotib olinadi',
+    'suggest.nothing': '«{q}» bo‘yicha hech narsa topilmadi. Yozilishini tekshiring yoki ommabop tovarlarni ko‘ring:',
+    'tag.gap': '{n}% gacha farq',
+    'tag.inStock': 'Mavjud: {n}/{m}',
 
     'sort.label': 'Saralash:',
     'sort.priceAsc': 'Avval arzonlari',
@@ -302,8 +318,9 @@ const TRANSLATIONS = {
     'bestsellers.title': 'Ommabop tovarlar',
     'bestsellers.sub': 'Demo katalogdan tanlov',
 
-    'partners.badge': '⚡ Demo savdo maydonchalari va brendlar',
-    'partners.title': 'Marketpleyslar va brendlar',
+    'partners.title': 'Narxlarni qayerda taqqoslaymiz',
+    'partners.markets': 'Marketpleyslar',
+    'partners.brands': 'Brendlar',
     'partners.sub': 'Taqqoslash uchun namunaviy savdo maydonchalari va brendlar',
 
     'sheet.close': 'Yopish',
@@ -343,6 +360,9 @@ const TRANSLATIONS = {
 
     'toast.favOn': "Tovar narx kuzatuviga qo\'shildi",
     'toast.favOff': 'Tovar narx kuzatuvidan olib tashlandi',
+    'toast.favCleared': 'Kuzatuv ro‘yxati tozalandi',
+    'favorites.clear': 'Tozalash',
+    'favorites.clearConfirm': 'Hammasini o‘chirish ({n})?',
     'toast.compareOn': "Tovar taqqoslashga qo\'shildi",
     'toast.compareOff': 'Tovar taqqoslashdan olib tashlandi',
     'toast.compareCleared': "Taqqoslash ro\'yxati tozalandi",
@@ -490,6 +510,12 @@ const TRANSLATIONS = {
     'price.from': 'from',
     'badge.savings': 'Save up to',
     'badge.stores': 'stores',
+    'tag.cheapestAt': 'Cheapest at',
+    'suggest.recent': 'Your searches',
+    'suggest.popular': 'Bought most often',
+    'suggest.nothing': 'Nothing matches “{q}”. Check the spelling or browse what’s popular:',
+    'tag.gap': 'up to {n}% apart',
+    'tag.inStock': 'In stock: {n} of {m}',
 
     'sort.label': 'Sort by:',
     'sort.priceAsc': 'Lowest price',
@@ -526,8 +552,9 @@ const TRANSLATIONS = {
     'bestsellers.title': 'Popular items',
     'bestsellers.sub': 'A selection from the demo catalog',
 
-    'partners.badge': '⚡ Demo marketplaces and brands',
-    'partners.title': 'Marketplaces & brands',
+    'partners.title': 'Where we compare prices',
+    'partners.markets': 'Marketplaces',
+    'partners.brands': 'Brands',
     'partners.sub': 'Example marketplaces and brands for comparing offers',
 
     'sheet.close': 'Close',
@@ -567,6 +594,9 @@ const TRANSLATIONS = {
 
     'toast.favOn': 'Added to price tracking',
     'toast.favOff': 'Removed from price tracking',
+    'toast.favCleared': 'Tracking list cleared',
+    'favorites.clear': 'Clear all',
+    'favorites.clearConfirm': 'Remove all {n}?',
     'toast.compareOn': 'Added to comparison',
     'toast.compareOff': 'Removed from comparison',
     'toast.compareCleared': 'Comparison list cleared',
@@ -707,7 +737,7 @@ function plural(n) {
   return forms[2];
 }
 
-const money = n => `${n.toLocaleString('ru-RU').replace(/ /g, ' ').replace(/ /g, ' ')} ${t('currency')}`;
+const money = n => `${n.toLocaleString('ru-RU').replace(/ /g, ' ').replace(/ /g, ' ')}\u00A0${t('currency')}`;
 
 function formatPriceFrom(amount) {
   if (LANG === 'uz') {

@@ -137,19 +137,19 @@ const CONSTELLATION = [
 ];
 
 const PARTNERS = [
-  { id: 'uzum',      name: 'Uzum Market', type: 'Маркетплейс', color: '#7000ff', bg: 'linear-gradient(135deg, #7000ff, #9333ea)', icon: '🛒' },
-  { id: 'olcha',     name: 'Olcha.uz',    type: 'Маркетплейс', color: '#f04e23', bg: 'linear-gradient(135deg, #f04e23, #ea580c)', icon: '🍒' },
-  { id: 'texnomart', name: 'Texnomart',   type: 'Электроника', color: '#e31e24', bg: 'linear-gradient(135deg, #e31e24, #dc2626)', icon: '⚡' },
-  { id: 'mediapark', name: 'Mediapark',   type: 'Техника',     color: '#0066b3', bg: 'linear-gradient(135deg, #0066b3, #0284c7)', icon: '📱' },
-  { id: 'asaxiy',    name: 'Asaxiy',      type: 'Маркетплейс', color: '#1a7f4e', bg: 'linear-gradient(135deg, #1a7f4e, #16a34a)', icon: '📦' },
-  { id: 'idea',      name: 'Idea',        type: 'Магазин',     color: '#ff6b00', bg: 'linear-gradient(135deg, #ff6b00, #f97316)', icon: '💡' },
-  { id: 'elmakon',   name: 'Elmakon',     type: 'Электроника', color: '#004b93', bg: 'linear-gradient(135deg, #004b93, #2563eb)', icon: '🔌' },
-  { id: 'zoodmall',  name: 'ZoodMall',    type: 'Маркетплейс', color: '#00b2a9', bg: 'linear-gradient(135deg, #00b2a9, #0d9488)', icon: '🛍️' },
-  { id: 'milan',     name: 'Milan Mebel', type: 'Мебель',      color: '#b0553f', bg: 'linear-gradient(135deg, #b0553f, #c2410c)', icon: '🛋️' },
-  { id: 'artel',     name: 'Artel',       type: 'Бытовая техника', color: '#d95f4c', bg: 'linear-gradient(135deg, #d95f4c, #ef4444)', icon: '❄️' },
-  { id: 'grohe',     name: 'Grohe',       type: 'Сантехника',  color: '#0066b3', bg: 'linear-gradient(135deg, #0066b3, #0369a1)', icon: '🚿' },
-  { id: 'knauf',     name: 'Knauf',       type: 'Стройматериалы', color: '#2f6fd0', bg: 'linear-gradient(135deg, #2f6fd0, #3b82f6)', icon: '🧱' },
-  { id: 'apple',     name: 'Apple',       type: 'Оригинал',    color: '#111827', bg: 'linear-gradient(135deg, #4b5563, #111827)', icon: '🍎' },
-  { id: 'samsung',   name: 'Samsung',     type: 'Официальный', color: '#1428a0', bg: 'linear-gradient(135deg, #1428a0, #1d4ed8)', icon: '✨' },
-  { id: 'bosch',     name: 'Bosch',       type: 'Инструменты', color: '#e21a22', bg: 'linear-gradient(135deg, #e21a22, #b91c1c)', icon: '🔧' }
+  { id: 'uzum',      kind: 'market', name: 'Uzum Market',  color: '#7000ff' },
+  { id: 'olcha',     kind: 'market', name: 'Olcha.uz',     color: '#f04e23' },
+  { id: 'texnomart', kind: 'market', name: 'Texnomart',    color: '#e31e24' },
+  { id: 'mediapark', kind: 'market', name: 'Mediapark',    color: '#0066b3' },
+  { id: 'asaxiy',    kind: 'market', name: 'Asaxiy',       color: '#1a7f4e' },
+  { id: 'idea',      kind: 'market', name: 'Idea',         color: '#ff6b00' },
+  { id: 'elmakon',   kind: 'market', name: 'Elmakon',      color: '#004b93' },
+  { id: 'zoodmall',  kind: 'market', name: 'ZoodMall',     color: '#00b2a9' },
+  { id: 'milan',     kind: 'brand',  name: 'Milan Mebel',  color: '#b0553f' },
+  { id: 'artel',     kind: 'brand',  name: 'Artel',        color: '#d95f4c' },
+  { id: 'grohe',     kind: 'brand',  name: 'Grohe',        color: '#0066b3' },
+  { id: 'knauf',     kind: 'brand',  name: 'Knauf',        color: '#2f6fd0' },
+  { id: 'apple',     kind: 'brand',  name: 'Apple',        color: '#111827' },
+  { id: 'samsung',   kind: 'brand',  name: 'Samsung',      color: '#1428a0' },
+  { id: 'bosch',     kind: 'brand',  name: 'Bosch',        color: '#e21a22' }
 ];
